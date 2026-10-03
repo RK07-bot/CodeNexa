@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  /* Fonts */
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Background */
+  --color-background: oklch(10.5% 0.035 263);
+
+  /* Surfaces */
+  --color-card: oklch(15% 0.045 264 / 0.72);
+  --color-recessed: oklch(13% 0.038 264);
+  --color-editor: oklch(12.5% 0.036 264);
+
+  /* Primary gradient */
+  --color-primary-start: oklch(67% 0.225 271);
+  --color-primary-end: oklch(60% 0.22 250);
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-background);
+}
