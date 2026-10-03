@@ -14,7 +14,7 @@ const validate = (schema) => {
         // }
         errors: result.error.flatten().fieldErrors,
         
-        message: "Validation Error",
+        message: "validation error",
       });
     }
 

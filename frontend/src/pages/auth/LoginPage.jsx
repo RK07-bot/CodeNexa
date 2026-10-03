@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../../api/auth.api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { Link } from "react-router-dom";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -28,7 +29,12 @@ function LoginPage() {
       if (data?.sessionConflict) {
         setConflict(data.existingSession);
       } else {
-        setError(data?.message || "Something went wrong. Please try again.");
+        setError(
+          data?.errors?.email?.[0] ||
+            data?.errors?.password?.[0] ||
+            data?.message ||
+            "Something went wrong. Please try again.",
+        );
       }
     } finally {
       setLoading(false);
@@ -42,14 +48,12 @@ function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 text-white">
-
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary-start/10 blur-3xl" />
 
       <div className="pointer-events-none absolute -bottom-40 -left-20 h-72 w-72 rounded-full bg-primary-end/10 blur-3xl" />
 
       <div className="relative w-full max-w-md">
-
         {/* Brand */}
         <div className="mb-8 text-center">
           <p className="text-2xl font-bold tracking-tight">
@@ -72,7 +76,6 @@ function LoginPage() {
 
         {/* Login Card */}
         <div className="rounded-2xl border border-white/8 bg-card p-6 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
-
           {/* Header */}
           <div className="mb-7">
             <div className="mb-3 inline-flex items-center rounded-lg border border-primary-start/20 bg-primary-start/10 px-2.5 py-1">
@@ -94,7 +97,6 @@ function LoginPage() {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-
             {/* Email */}
             <div className="space-y-2">
               <label
@@ -161,12 +163,19 @@ function LoginPage() {
               />
             </div>
 
+            <div className="flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-xs font-medium text-primary-start hover:text-primary-end"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             {/* Error */}
             {error && (
               <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-3">
-                <p className="text-sm leading-5 text-red-400">
-                  {error}
-                </p>
+                <p className="text-sm leading-5 text-red-400">{error}</p>
               </div>
             )}
 
@@ -204,7 +213,6 @@ function LoginPage() {
       {/* Session Conflict Modal */}
       {conflict && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-sm">
-
           <div
             className="
               w-full max-w-md
@@ -220,10 +228,8 @@ function LoginPage() {
               duration-200
             "
           >
-
             {/* Modal Header */}
             <div className="flex items-start gap-4">
-
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/10 text-amber-400">
                 <span className="text-sm font-bold">!</span>
               </div>

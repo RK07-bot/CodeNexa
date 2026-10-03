@@ -7,7 +7,7 @@ import { isAuthenticated} from "../middlewares/auth.middleware.js"
 const authRouter=express.Router();
 
 authRouter.post("/register",validate(registerSchema),registerUser);
-authRouter.post("/verify/:token",verifyUser);
+authRouter.get("/verify/:token",verifyUser);
 authRouter.post("/resend-verification",validate(resendVerificationSchema),resendVerificationEmail);
 authRouter.post("/login",validate(loginSchema),loginUser);
 authRouter.post("/forgot-password",validate(forgotPasswordSchema),forgotPassword);

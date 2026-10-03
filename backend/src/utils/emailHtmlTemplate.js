@@ -2,7 +2,7 @@ export const getVerifyEmailHtml = ({ email, token,username }) => {
 
   const appName = process.env.APP_NAME || "CodeNexa";
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  const verifyUrl = `${baseUrl.replace(/\/+$/, "")}/token/${encodeURIComponent(token)}`;
+  const verifyUrl = `${baseUrl.replace(/\/+$/, "")}/verify/${encodeURIComponent(token)}`;
 
   return `
 <!DOCTYPE html>

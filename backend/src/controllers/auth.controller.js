@@ -77,6 +77,7 @@ export const registerUser = tryCatch(async (req, res) => {
 
   // Generate a secure random token for email verification
   const verificationToken = crypto.randomBytes(32).toString("hex");
+  console.log("GENERATED TOKEN:", verificationToken);
 
   // Redis key used to temporarily store unverified user data
   const verificationKey = `verify:${verificationToken}`;
