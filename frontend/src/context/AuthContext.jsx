@@ -1,17 +1,36 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { getMyProfile } from "../api/auth.api.js";
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // null user means logged out — every page can just check `user` directly
-  const value = { user, setUser };
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const res = await getMyProfile();
+        setUser(res.data.user);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+    loadUser();
+  }, []);
 
-// small wrapper so components don't need to import useContext + AuthContext separately every time
-export function useAuth() {
+  const value = { user, setUser, loading };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
   return useContext(AuthContext);
-}
+};

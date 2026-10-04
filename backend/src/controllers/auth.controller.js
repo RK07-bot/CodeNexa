@@ -321,15 +321,7 @@ export const loginUser = tryCatch(async (req, res) => {
   });
 });
 
-export const getMyProfile = tryCatch(async (req, res) => {
-  const user = req.user;
 
-  return res.status(200).json({
-    success: true,
-    message: "User fetched successfully",
-    user: user,
-  });
-});
 
 export const refreshAccessToken = tryCatch(async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
@@ -642,6 +634,16 @@ export const resendOtp = tryCatch(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "If the email is registered, a new OTP has been sent.",
+  });
+});
+
+export const getMyProfile = tryCatch(async (req, res) => {
+  const user = req.user;
+
+  return res.status(200).json({
+    success: true,
+    message: "User fetched successfully",
+    user: user,
   });
 });
 
