@@ -5,7 +5,6 @@ import userModel from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import { getOtpHtml, getVerifyEmailHtml } from "../utils/emailHtmlTemplate.js";
 import crypto from "crypto";
-import { sendEmail } from "../services/email.service.js";
 import generateOtp from "../utils/generateOtp.js";
 import { generateTokens } from "../utils/generateToken.js";
 import { verifyRefreshToken } from "../utils/verifyRefreshToken.js";

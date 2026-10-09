@@ -1,0 +1,31 @@
+{
+  "title": "Longest Substring Without Repeating Characters",
+  "difficulty": "medium",
+  "topics": ["string", "sliding window", "hash table"],
+  "description": "Given a string s, find the length of the longest substring that contains no repeating characters. A substring is a continuous part of the string.",
+  "constraints": "1 <= length of s <= 5 * 10^4\ns contains only lowercase English letters and digits.",
+  "inputFormat": "A single line containing the string s.",
+  "outputFormat": "A single integer, the length of the longest substring without repeating characters.",
+  "hints": [
+    "Checking every substring works, but it is too slow for long strings.",
+    "Keep a window that never contains a repeated character.",
+    "When a character repeats, move the left edge of the window just past its previous position."
+  ],
+  "timeLimit": 2,
+  "memoryLimit": 256,
+  "examples": [
+    { "input": "abcabcbb", "output": "3", "explanation": "The longest such substring is abc, with length 3." },
+    { "input": "bbbbb", "output": "1", "explanation": "Every substring of length 2 or more repeats b." },
+    { "input": "pwwkew", "output": "3", "explanation": "The answer is wke. Note that pwke is not a substring." }
+  ],
+  "testCases": [
+    { "input": "a", "expectedOutput": "1" },
+    { "input": "au", "expectedOutput": "2" },
+    { "input": "dvdf", "expectedOutput": "3" },
+    { "input": "abba", "expectedOutput": "2" },
+    { "input": "tmmzuxt", "expectedOutput": "5" },
+    { "input": "abcdefg", "expectedOutput": "7" },
+    { "input": "anviaj", "expectedOutput": "5" },
+    { "input": "a1b2c3a1", "expectedOutput": "6" }
+  ]
+}

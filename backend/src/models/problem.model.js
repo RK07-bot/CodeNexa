@@ -1,0 +1,97 @@
+import mongoose from "mongoose";
+
+// a draft can be saved half-filled, so these only become required once it is submitted
+const requiredUnlessDraft = [
+  function () {
+    return this.status !== "draft";
+  },
+  "{PATH} is required",
+];
+
+const exampleSchema = new mongoose.Schema(
+  {
+    input: { type: String, required: true },
+    output: { type: String, required: true },
+    explanation: { type: String, default: "" },
+  },
+  { _id: false },
+);
+
+// hidden tests, only the judge uses these
+const testCaseSchema = new mongoose.Schema(
+  {
+    input: { type: String, required: true },
+    expectedOutput: { type: String, required: true },
+    source: { type: String, enum: ["author", "ai"], default: "ai" },
+  },
+  { _id: false },
+);
+
+const referenceSolutionSchema = new mongoose.Schema(
+  {
+    language: { type: String, required: true },
+    code: { type: String, required: true },
+    source: { type: String, enum: ["author", "ai"], default: "ai" },
+  },
+  { _id: false },
+);
+
+const problemSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      required: requiredUnlessDraft,
+    },
+    // set when the problem is submitted, not on draft
+    slug: { type: String, unique: true, sparse: true },
+    description: { type: String, required: requiredUnlessDraft },
+    constraints: { type: String, default: "" },
+    inputFormat: { type: String, required: requiredUnlessDraft },
+    outputFormat: { type: String, required: requiredUnlessDraft },
+    difficulty: {
+      type: String,
+      enum: ["easy", "medium", "hard"],
+      required: requiredUnlessDraft,
+    },
+    topics: [{ type: String, trim: true, lowercase: true }],
+    hints: { type: [String], default: [] },
+
+    timeLimit: { type: Number, default: 2, min: 1, max: 10 }, // seconds
+    memoryLimit: { type: Number, default: 256, min: 64, max: 512 }, // MB
+
+    examples: { type: [exampleSchema], default: [] },
+    testCases: { type: [testCaseSchema], default: [], select: false },
+    referenceSolution: { type: referenceSolutionSchema, select: false },
+
+    status: {
+      type: String,
+      enum: ["draft", "processing", "pending_review", "approved", "rejected"],
+      default: "draft",
+    },
+    rejectionReason: { type: String },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    reviewedAt: { type: Date },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    stats: {
+      attempts: { type: Number, default: 0 },
+      accepted: { type: Number, default: 0 },
+    },
+  },
+  { timestamps: true },
+);
+
+problemSchema.index({ status: 1, difficulty: 1 });
+problemSchema.index({ topics: 1 });
+problemSchema.index({ createdBy: 1, createdAt: -1 });
+
+const problemModel = mongoose.model("Problem", problemSchema);
+
+export default problemModel;
