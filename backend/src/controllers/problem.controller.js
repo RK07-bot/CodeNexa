@@ -9,6 +9,9 @@ const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const getAcceptanceRate = ({ attempts, accepted }) =>
   attempts > 0 ? Math.round((accepted / attempts) * 100) : null;
 
+const toSummary = (text) =>
+  text.length > 90 ? `${text.slice(0, 90).trimEnd()}...` : text;
+
 export const listProblems = tryCatch(async (req, res) => {
   const parsed = listProblemsQuerySchema.safeParse(req.query);
 
@@ -34,7 +37,7 @@ export const listProblems = tryCatch(async (req, res) => {
   const [problems, total] = await Promise.all([
     problemModel
       .find(filter)
-      .select("title slug difficulty topics stats")
+      .select("title slug description difficulty topics stats")
       // _id as a tiebreaker so pages don't repeat or skip rows
       .sort({ createdAt: -1, _id: -1 })
       .skip((page - 1) * limit)
@@ -45,8 +48,9 @@ export const listProblems = tryCatch(async (req, res) => {
 
   return res.status(200).json({
     success: true,
-    problems: problems.map(({ stats, ...rest }) => ({
+    problems: problems.map(({ stats, description, ...rest }) => ({
       ...rest,
+      summary: toSummary(description),
       acceptanceRate: getAcceptanceRate(stats),
     })),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
@@ -64,7 +68,9 @@ export const getProblemBySlug = tryCatch(async (req, res) => {
     .lean();
 
   if (!problem) {
-    return res.status(404).json({ success: false, message: "Problem not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Problem not found" });
   }
 
   const { stats, ...rest } = problem;

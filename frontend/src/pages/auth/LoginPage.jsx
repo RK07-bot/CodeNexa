@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { loginUser } from "../../api/auth.api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { Link } from "react-router-dom";
+import {useLocation} from "react-router-dom";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,6 +14,13 @@ function LoginPage() {
 
   const { setUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // back to the page they were trying to open, or the problem list by default
+// (switch the default to /dashboard once that page exists)
+const redirectTo = location.state?.from
+  ? `${location.state.from.pathname}${location.state.from.search}`
+  : "/problems";
 
   const attemptLogin = async (force = false) => {
     setLoading(true);
@@ -21,7 +29,7 @@ function LoginPage() {
     try {
       const res = await loginUser({ email, password, force });
       setUser(res.data.user);
-      navigate("/dashboard");
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       const data = err.response?.data;
 

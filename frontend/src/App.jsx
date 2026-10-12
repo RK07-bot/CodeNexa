@@ -7,6 +7,8 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
 import VerifyEmailPage from "./pages/auth/VerifyEmailPage.jsx";
 import HomePage from "./pages/home/HomePage.jsx";
+import ProblemsPage from "./pages/problems/ProblemsPage.jsx";
+import SubmitProblemPage from "./pages/submit/SubmitProblemPage.jsx";
 
 function App() {
   return (
@@ -21,6 +23,22 @@ function App() {
       {/* everything else shares the navbar */}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
+        <Route
+          path="/problems"
+          element={
+            <ProtectedRoute>
+              <ProblemsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/submit"
+          element={
+            <ProtectedRoute>
+              <SubmitProblemPage />
+            </ProtectedRoute>
+          }
+        />
         {/* Problems, Dashboard, Rooms, Submit, Admin, Session routes go here as we build them */}
       </Route>
     </Routes>
