@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LANGUAGE_IDS } from "../config/languages.js";
 
 export const listProblemsQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
@@ -7,3 +8,11 @@ export const listProblemsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(10),
 });
+
+export const runCodeSchema = z.object({
+  language: z.enum(LANGUAGE_IDS),
+  code: z.string().min(1, "Write some code first").max(50000, "Code is too long"),
+  inputs: z.array(z.string().max(10000)).min(1).max(5).optional(),
+});
+
+export const submitCodeSchema = runCodeSchema.omit({ inputs: true });

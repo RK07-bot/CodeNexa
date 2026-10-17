@@ -9,6 +9,7 @@ import VerifyEmailPage from "./pages/auth/VerifyEmailPage.jsx";
 import HomePage from "./pages/home/HomePage.jsx";
 import ProblemsPage from "./pages/problems/ProblemsPage.jsx";
 import SubmitProblemPage from "./pages/submit/SubmitProblemPage.jsx";
+import ProblemPage from "./pages/problems/ProblemPage.jsx";
 
 function App() {
   return (
@@ -41,6 +42,14 @@ function App() {
         />
         {/* Problems, Dashboard, Rooms, Submit, Admin, Session routes go here as we build them */}
       </Route>
+      <Route
+        path="/problems/:slug"
+        element={
+          <ProtectedRoute>
+            <ProblemPage />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

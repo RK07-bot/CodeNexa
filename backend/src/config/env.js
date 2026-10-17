@@ -25,13 +25,23 @@ if (!process.env.ACCESS_JWT_SECRET) {
   throw new Error("ACCESS_JWT_SECRET IS NOT DEFINED IN ENVVIRONMENT VARIABLES");
 }
 if (!process.env.REFRESH_JWT_SECRET) {
-  throw new Error("REFRESH_JWT_SECRET IS NOT DEFINED IN ENVVIRONMENT VARIABLES");
+  throw new Error(
+    "REFRESH_JWT_SECRET IS NOT DEFINED IN ENVVIRONMENT VARIABLES",
+  );
 }
 if (!process.env.NODE_ENV) {
   throw new Error("NODE_ENV IS NOT DEFINED IN ENVVIRONMENT VARIABLES");
 }
-
-
+if (!process.env.ONLINECOMPILER_API_KEY) {
+  throw new Error(
+    "ONLINECOMPILER_API_KEY IS NOT DEFINED IN ENVVIRONMENT VARIABLES",
+  );
+}
+if (!process.env.ONLINECOMPILER_API_KEY) {
+  throw new Error(
+    "ONLINECOMPILER_API_KEYIS NOT DEFINED IN ENVVIRONMENT VARIABLES",
+  );
+}
 
 const config = {
   MONGO_URI: process.env.MONGO_URI,
@@ -44,6 +54,8 @@ const config = {
   ACCESS_JWT_SECRET: process.env.ACCESS_JWT_SECRET,
   REFRESH_JWT_SECRET: process.env.REFRESH_JWT_SECRET,
   NODE_ENV: process.env.NODE_ENV || "development",
+  ONLINECOMPILER_API_KEY: process.env.ONLINECOMPILER_API_KEY,
+  ONLINECOMPILER_DEBUG: process.env.ONLINECOMPILER_DEBUG === "true",
 };
 
 export default config;

@@ -9,3 +9,5 @@ export const getProblems = (filters) => {
 };
 
 export const getTopics = () => api.get("/problems/topics");
+
+export const getProblem = (slug) => api.get(`/problems/${slug}`);
