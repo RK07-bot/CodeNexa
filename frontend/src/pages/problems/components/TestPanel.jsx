@@ -1,21 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ResultView from "./ResultView.jsx";
 
 const tabs = [
   { id: "result", label: "Test result" },
   { id: "testcase", label: "Testcase" },
 ];
 
-const TestPanel = ({ examples }) => {
+const TestPanel = ({ inputs, onInputChange, execution }) => {
   const [tab, setTab] = useState("result");
   const [activeCase, setActiveCase] = useState(0);
-  // editable copies of the example inputs, Run will send these later
-  const [inputs, setInputs] = useState(() => examples.map((e) => e.input));
 
-  const updateInput = (value) =>
-    setInputs((prev) => prev.map((v, i) => (i === activeCase ? value : v)));
+  // a new run or submit always brings the result tab to the front
+  useEffect(() => {
+    if (execution.runId > 0) setTab("result");
+  }, [execution.runId]);
 
   return (
-    <div className="flex h-52 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-recessed/70 lg:h-60">
+    <div className="flex h-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-recessed/70">
       <div className="flex shrink-0 items-center gap-5 border-b border-white/8 px-4">
         {tabs.map((t) => (
           <button
@@ -35,15 +36,39 @@ const TestPanel = ({ examples }) => {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {tab === "result" && (
-          <p className="grid h-full place-items-center text-sm text-white/40">
-            Run your code to see test results.
-          </p>
+          <>
+            {execution.status === "idle" && (
+              <p className="grid h-full place-items-center text-sm text-white/40">
+                Run your code to see test results.
+              </p>
+            )}
+
+            {execution.status === "running" && (
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+                <span className="size-6 animate-spin rounded-full border-2 border-white/10 border-t-primary-start" />
+                <p className="text-sm text-white/55">
+                  {execution.kind === "run"
+                    ? "Running your code..."
+                    : "Judging your solution against all tests..."}
+                </p>
+                <p className="text-xs text-white/30">Very slow code can take up to 30 seconds.</p>
+              </div>
+            )}
+
+            {execution.status === "error" && (
+              <p className="rounded-xl border border-red-400/20 bg-red-400/5 px-4 py-3 text-sm text-red-400">
+                {execution.message}
+              </p>
+            )}
+
+            {execution.status === "done" && <ResultView key={execution.runId} execution={execution} />}
+          </>
         )}
 
         {tab === "testcase" && (
           <>
             <div className="flex flex-wrap gap-2">
-              {examples.map((_, i) => (
+              {inputs.map((_, i) => (
                 <button
                   key={i}
                   type="button"
@@ -61,9 +86,9 @@ const TestPanel = ({ examples }) => {
 
             <textarea
               value={inputs[activeCase]}
-              onChange={(e) => updateInput(e.target.value)}
+              onChange={(e) => onInputChange(activeCase, e.target.value)}
               spellCheck={false}
-              className="mt-3 h-28 w-full resize-none rounded-xl border border-white/8 bg-editor p-3 font-mono text-xs leading-relaxed text-white/75 outline-none transition-colors duration-200 focus:border-primary-start/50"
+              className="mt-3 h-36 w-full resize-none rounded-xl border border-white/8 bg-editor p-3 font-mono text-xs leading-relaxed text-white/75 outline-none transition-colors duration-200 focus:border-primary-start/50"
             />
           </>
         )}

@@ -4,17 +4,24 @@ import { Code2, SearchX, CircleAlert } from "lucide-react";
 import { getProblems, getTopics } from "../../api/problems.api.js";
 import useDebounce from "../../hooks/useDebounce.js";
 import ProblemFilters from "./components/ProblemFilters.jsx";
-import ProblemRow, { ProblemRowSkeleton, ROW_GRID } from "./components/ProblemRow.jsx";
+import ProblemRow, {
+  ProblemRowSkeleton,
+  ROW_GRID,
+} from "./components/ProblemRow.jsx";
 import Pagination from "./components/Pagination.jsx";
 
 const ProblemsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const progress = searchParams.get("progress") || "";
   const search = searchParams.get("search") || "";
   const difficulty = searchParams.get("difficulty") || "";
   const topic = searchParams.get("topic") || "";
   const page = Math.max(Math.floor(Number(searchParams.get("page"))) || 1, 1);
-  const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 10, 1), 50);
+  const limit = Math.min(
+    Math.max(Number(searchParams.get("limit")) || 10, 1),
+    50,
+  );
 
   // the input keeps what the user is typing, the URL only gets the settled value
   const [searchInput, setSearchInput] = useState(search);
@@ -64,7 +71,14 @@ const ProblemsPage = () => {
       setError("");
 
       try {
-        const res = await getProblems({ search, difficulty, topic, page, limit });
+        const res = await getProblems({
+          search,
+          difficulty,
+          topic,
+          progress,
+          page,
+          limit,
+        });
         if (cancelled) return;
         setProblems(res.data.problems);
         setPagination(res.data.pagination);
@@ -82,9 +96,9 @@ const ProblemsPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [search, difficulty, topic, page, limit, reloadKey]);
+  }, [search, difficulty, topic, progress, page, limit, reloadKey]);
 
-  const hasFilters = Boolean(search || difficulty || topic);
+  const hasFilters = Boolean(search || difficulty || topic || progress);
 
   const clearFilters = () => {
     setSearchInput("");
@@ -110,8 +124,8 @@ const ProblemsPage = () => {
             </span>
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-white/45 sm:text-base">
-            Filter by difficulty or topic, or search by title. Every problem is checked
-            against hidden tests.
+            Filter by difficulty or topic, or search by title. Every problem is
+            checked against hidden tests.
           </p>
         </div>
 
@@ -138,11 +152,15 @@ const ProblemsPage = () => {
           topic={topic}
           onTopicChange={(value) => updateParams({ topic: value })}
           topics={topics}
+          progress={progress}
+          onProgressChange={(value) => updateParams({ progress: value })}
         />
       </div>
 
       <p className="mb-3 mt-6">
-        <span className="text-2xl font-semibold text-primary-start">{pagination.total}</span>{" "}
+        <span className="text-2xl font-semibold text-primary-start">
+          {pagination.total}
+        </span>{" "}
         <span className="text-sm text-white/45">problems</span>
       </p>
 
@@ -180,7 +198,9 @@ const ProblemsPage = () => {
           <div className="flex flex-col items-center px-6 py-14 text-center">
             <SearchX className="size-8 text-white/30" />
             <p className="mt-3 text-sm font-medium text-white">
-              {hasFilters ? "No problems match your filters" : "No problems yet"}
+              {hasFilters
+                ? "No problems match your filters"
+                : "No problems yet"}
             </p>
             {hasFilters && (
               <>

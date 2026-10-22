@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { Circle, CircleCheck, CircleDot, ChevronRight } from "lucide-react";
 import DifficultyBadge from "../../../components/DifficultyBadge.jsx";
 
 // shared with the header row in ProblemsPage so the columns line up
@@ -27,6 +27,26 @@ const Acceptance = ({ rate }) => {
   );
 };
 
+const progressIcons = {
+  solved: { Icon: CircleCheck, className: "text-emerald-400", label: "Solved" },
+  attempted: {
+    Icon: CircleDot,
+    className: "text-amber-400",
+    label: "Attempted",
+  },
+  unsolved: {
+    Icon: Circle,
+    className: "text-white/20",
+    label: "Not attempted",
+  },
+};
+
+const ProgressIcon = ({ progress }) => {
+  const { Icon, className, label } =
+    progressIcons[progress] ?? progressIcons.unsolved;
+  return <Icon className={`size-5 shrink-0 ${className}`} aria-label={label} />;
+};
+
 const ProblemRow = ({ problem, index }) => (
   <motion.div
     initial={{ opacity: 0, y: 8 }}
@@ -38,11 +58,16 @@ const ProblemRow = ({ problem, index }) => (
       to={`/problems/${problem.slug}`}
       className={`group grid items-center gap-3 px-5 py-4 transition-colors duration-200 hover:bg-white/3 ${ROW_GRID}`}
     >
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-white transition-colors duration-200 group-hover:text-primary-start">
-          {problem.title}
-        </p>
-        <p className="mt-0.5 truncate text-xs text-white/40">{problem.summary}</p>
+      <div className="flex min-w-0 items-center gap-3">
+        <ProgressIcon progress={problem.progress} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-white transition-colors duration-200 group-hover:text-primary-start">
+            {problem.title}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-white/40">
+            {problem.summary}
+          </p>
+        </div>
       </div>
 
       {/* on small screens these stack under the title, on md+ they become grid columns */}

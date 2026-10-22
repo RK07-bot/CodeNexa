@@ -25,7 +25,21 @@ const handleMount = (_editor, monaco) => {
   document.fonts.ready.then(() => monaco.editor.remeasureFonts());
 };
 
-const CodeEditor = ({ modelPath, language, onLanguageChange, code, onCodeChange, onReset }) => {
+const ButtonSpinner = () => (
+  <span className="size-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+);
+
+const CodeEditor = ({
+  modelPath,
+  language,
+  onLanguageChange,
+  code,
+  onCodeChange,
+  onReset,
+  onRun,
+  onSubmit,
+  running,
+}) => {
   const current = LANGUAGES.find((l) => l.id === language);
 
   return (
@@ -59,20 +73,30 @@ const CodeEditor = ({ modelPath, language, onLanguageChange, code, onCodeChange,
 
           <button
             type="button"
-            disabled
-            title="Running code is coming soon"
-            className="flex items-center gap-1.5 rounded-lg border border-white/8 px-3 py-1.5 text-sm font-medium text-white/75 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onRun}
+            disabled={Boolean(running)}
+            className="flex items-center gap-1.5 rounded-lg border border-white/8 px-3 py-1.5 text-sm font-medium text-white/75 transition-colors duration-200 hover:border-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Play className="size-3.5" /> Run
+            {running === "run" ? (
+              <ButtonSpinner />
+            ) : (
+              <Play className="size-3.5" />
+            )}{" "}
+            Run
           </button>
 
           <button
             type="button"
-            disabled
-            title="Submitting code is coming soon"
-            className="flex items-center gap-1.5 rounded-lg bg-linear-to-r from-primary-start to-primary-end px-3.5 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onSubmit}
+            disabled={Boolean(running)}
+            className="flex items-center gap-1.5 rounded-lg bg-linear-to-r from-primary-start to-primary-end px-3.5 py-1.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
           >
-            <Send className="size-3.5" /> Submit
+            {running === "submit" ? (
+              <ButtonSpinner />
+            ) : (
+              <Send className="size-3.5" />
+            )}{" "}
+            Submit
           </button>
         </div>
       </div>

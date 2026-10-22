@@ -7,6 +7,7 @@ export const listProblemsQuerySchema = z.object({
   topic: z.string().trim().toLowerCase().max(50).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(10),
+  progress: z.enum(["solved", "attempted", "unsolved"]).optional(),
 });
 
 export const runCodeSchema = z.object({

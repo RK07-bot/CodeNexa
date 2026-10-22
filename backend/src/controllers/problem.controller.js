@@ -2,6 +2,7 @@ import { z } from "zod";
 import tryCatch from "../middlewares/try-catch.middleware.js";
 import problemModel from "../models/problem.model.js";
 import { listProblemsQuerySchema } from "../validators/problem.validator.js";
+import submissionModel from "../models/submission.model.js";
 
 // the search text goes into a regex, so special characters have to be escaped first
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -23,11 +24,29 @@ export const listProblems = tryCatch(async (req, res) => {
     });
   }
 
-  const { search, difficulty, topic, page, limit } = parsed.data;
+  const { search, difficulty, topic, progress, page, limit } = parsed.data;
+
+  // what this user has solved or tried, used for both the icons and the progress filter
+  const [solvedIds, attemptedIds] = await Promise.all([
+    submissionModel.distinct("problem", {
+      user: req.user._id,
+      verdict: "accepted",
+    }),
+    submissionModel.distinct("problem", { user: req.user._id }),
+  ]);
+
+  const solved = new Set(solvedIds.map(String));
+  const attempted = new Set(attemptedIds.map(String));
 
   const filter = { status: "approved" };
   if (difficulty) filter.difficulty = difficulty;
   if (topic) filter.topics = topic;
+
+  if (progress === "solved") filter._id = { $in: solvedIds };
+  if (progress === "attempted") {
+    filter._id = { $in: attemptedIds.filter((id) => !solved.has(String(id))) };
+  }
+  if (progress === "unsolved") filter._id = { $nin: attemptedIds };
 
   if (search) {
     const pattern = new RegExp(escapeRegex(search), "i");
@@ -48,11 +67,20 @@ export const listProblems = tryCatch(async (req, res) => {
 
   return res.status(200).json({
     success: true,
-    problems: problems.map(({ stats, description, ...rest }) => ({
-      ...rest,
-      summary: toSummary(description),
-      acceptanceRate: getAcceptanceRate(stats),
-    })),
+    problems: problems.map(({ stats, description, ...rest }) => {
+      const id = String(rest._id);
+
+      return {
+        ...rest,
+        summary: toSummary(description),
+        acceptanceRate: getAcceptanceRate(stats),
+        progress: solved.has(id)
+          ? "solved"
+          : attempted.has(id)
+            ? "attempted"
+            : "unsolved",
+      };
+    }),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   });
 });
@@ -73,12 +101,19 @@ export const getProblemBySlug = tryCatch(async (req, res) => {
       .json({ success: false, message: "Problem not found" });
   }
 
-  const { stats, ...rest } = problem;
+ const { stats, ...rest } = problem;
 
-  return res.status(200).json({
-    success: true,
-    problem: { ...rest, acceptanceRate: getAcceptanceRate(stats) },
-  });
+const solved = Boolean(
+  await submissionModel.exists({
+    user: req.user._id,
+    problem: problem._id,
+    verdict: "accepted",
+  }),
+);
+
+return res.status(200).json({
+  success: true,
+  problem: { ...rest, acceptanceRate: getAcceptanceRate(stats), solved },
 });
 
 export const getTopics = tryCatch(async (req, res) => {

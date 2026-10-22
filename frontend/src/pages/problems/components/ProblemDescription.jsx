@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ChevronDown, Clock, Cpu, Lightbulb } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Clock,
+  Cpu,
+  Lightbulb,
+  CircleCheck,
+} from "lucide-react";
 import DifficultyBadge from "../../../components/DifficultyBadge.jsx";
 import CopyButton from "../../../components/CopyButton.jsx";
 
@@ -18,7 +25,9 @@ const CodeBlock = ({ label, text }) => (
       <span className="text-xs text-white/45">{label}</span>
       <CopyButton text={text} />
     </div>
-    <pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed text-white/75">{text}</pre>
+    <pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed text-white/75">
+      {text}
+    </pre>
   </div>
 );
 
@@ -58,7 +67,7 @@ const Hint = ({ index, text }) => {
   );
 };
 
-const ProblemDescription = ({ problem }) => {
+const ProblemDescription = ({ problem, solved }) => {
   const constraints = problem.constraints.split("\n").filter(Boolean);
 
   return (
@@ -70,12 +79,21 @@ const ProblemDescription = ({ problem }) => {
         <ArrowLeft className="size-3.5" /> All problems
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">{problem.title}</h1>
+      <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
+        {problem.title}
+      </h1>
 
       <div className="mt-3 flex flex-wrap items-center gap-2.5">
         <DifficultyBadge difficulty={problem.difficulty} />
+        {solved && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+            <CircleCheck className="size-3.5" /> Solved
+          </span>
+        )}
         {problem.acceptanceRate !== null && (
-          <span className="text-xs text-white/45">{problem.acceptanceRate}% acceptance</span>
+          <span className="text-xs text-white/45">
+            {problem.acceptanceRate}% acceptance
+          </span>
         )}
         {problem.topics.map((t) => (
           <span
@@ -87,27 +105,40 @@ const ProblemDescription = ({ problem }) => {
         ))}
       </div>
 
-      <p className="mt-5 whitespace-pre-line text-sm leading-7 text-white/65">{problem.description}</p>
+      <p className="mt-5 whitespace-pre-line text-sm leading-7 text-white/65">
+        {problem.description}
+      </p>
 
       <Section title="Input format">
-        <p className="whitespace-pre-line text-sm leading-7 text-white/65">{problem.inputFormat}</p>
+        <p className="whitespace-pre-line text-sm leading-7 text-white/65">
+          {problem.inputFormat}
+        </p>
       </Section>
 
       <Section title="Output format">
-        <p className="whitespace-pre-line text-sm leading-7 text-white/65">{problem.outputFormat}</p>
+        <p className="whitespace-pre-line text-sm leading-7 text-white/65">
+          {problem.outputFormat}
+        </p>
       </Section>
 
       <Section title="Examples">
         <div className="space-y-4">
           {problem.examples.map((example, i) => (
-            <div key={i} className="rounded-xl border border-white/8 bg-recessed/40 p-3">
-              <p className="mb-2.5 text-xs font-medium text-white/65">Example {i + 1}</p>
+            <div
+              key={i}
+              className="rounded-xl border border-white/8 bg-recessed/40 p-3"
+            >
+              <p className="mb-2.5 text-xs font-medium text-white/65">
+                Example {i + 1}
+              </p>
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <CodeBlock label="Input" text={example.input} />
                 <CodeBlock label="Output" text={example.output} />
               </div>
               {example.explanation && (
-                <p className="mt-2.5 text-xs leading-6 text-white/45">{example.explanation}</p>
+                <p className="mt-2.5 text-xs leading-6 text-white/45">
+                  {example.explanation}
+                </p>
               )}
             </div>
           ))}
@@ -131,10 +162,12 @@ const ProblemDescription = ({ problem }) => {
       <Section title="Limits">
         <div className="flex flex-wrap gap-3">
           <span className="flex items-center gap-2 rounded-lg border border-white/8 bg-recessed px-3 py-2 text-xs text-white/65">
-            <Clock className="size-3.5 text-primary-start" /> {problem.timeLimit}s time limit
+            <Clock className="size-3.5 text-primary-start" />{" "}
+            {problem.timeLimit}s time limit
           </span>
           <span className="flex items-center gap-2 rounded-lg border border-white/8 bg-recessed px-3 py-2 text-xs text-white/65">
-            <Cpu className="size-3.5 text-primary-start" /> {problem.memoryLimit} MB memory
+            <Cpu className="size-3.5 text-primary-start" />{" "}
+            {problem.memoryLimit} MB memory
           </span>
         </div>
       </Section>
