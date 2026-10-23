@@ -115,6 +115,7 @@ return res.status(200).json({
   success: true,
   problem: { ...rest, acceptanceRate: getAcceptanceRate(stats), solved },
 });
+});
 
 export const getTopics = tryCatch(async (req, res) => {
   // feeds the topic dropdown on the Problems page
