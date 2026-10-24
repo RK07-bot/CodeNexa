@@ -1,3 +1,4 @@
+
 @import "tailwindcss";
 
 @theme {
@@ -16,6 +17,10 @@
   /* Primary gradient */
   --color-primary-start: oklch(67% 0.225 271);
   --color-primary-end: oklch(60% 0.22 250);
+}
+
+html {
+  scrollbar-gutter: stable;
 }
 
 body {

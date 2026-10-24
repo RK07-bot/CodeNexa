@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CircleAlert, SearchX } from "lucide-react";
-import { getProblem, getSubmissions, runCode, submitCode } from "../../api/problems.api.js";
+import { ArrowLeft, CircleAlert, SearchX } from "lucide-react";
+import {
+  getProblem,
+  getSubmissions,
+  runCode,
+  submitCode,
+} from "../../api/problems.api.js";
 import { LANGUAGES } from "../../lib/languages.js";
 import { readStorage, writeStorage } from "../../lib/storage.js";
 import useProblemCode from "../../hooks/useProblemCode.js";
@@ -17,7 +22,13 @@ const LEFT_TABS = [
   { id: "submissions", label: "Submissions" },
 ];
 
-const IDLE = { runId: 0, kind: null, status: "idle", data: null, message: "" };
+const IDLE = {
+  runId: 0,
+  kind: null,
+  status: "idle",
+  data: null,
+  message: "",
+};
 
 const getSavedLanguage = () => {
   const saved = readStorage(LANGUAGE_KEY);
@@ -25,7 +36,7 @@ const getSavedLanguage = () => {
 };
 
 const PageSkeleton = () => (
-  <div className="grid animate-pulse gap-3 p-3 lg:h-[calc(100dvh-4rem)] lg:grid-cols-2">
+  <div className="grid animate-pulse gap-3 p-3 lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-2">
     <div className="space-y-4 rounded-2xl border border-white/8 bg-card p-6">
       <div className="h-6 w-1/2 rounded bg-white/8" />
       <div className="h-4 w-1/3 rounded bg-white/5" />
@@ -52,9 +63,21 @@ const ProblemPage = () => {
   const [inputs, setInputs] = useState([]);
   const [execution, setExecution] = useState(IDLE);
   const [solved, setSolved] = useState(false);
-  const [submissions, setSubmissions] = useState({ status: "loading", items: [] });
+  const [submissions, setSubmissions] = useState({
+    status: "loading",
+    items: [],
+  });
 
-  // every run gets a number, so a result that arrives after the user left can be ignored
+  // Resizable workspace panels
+  const [leftWidth, setLeftWidth] = useState(32);
+  const [editorHeight, setEditorHeight] = useState(66);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const workspaceRef = useRef(null);
+  const rightPanelRef = useRef(null);
+  const resizeState = useRef(null);
+
+  // Every run gets a number, so stale results can be ignored.
   const runCounter = useRef(0);
 
   const changeLanguage = (id) => {
@@ -85,9 +108,11 @@ const ProblemPage = () => {
         setSolved(loaded.solved);
       } catch (err) {
         if (cancelled) return;
+
         setError({
           notFound: err.response?.status === 404,
-          message: err.response?.data?.message || "Could not load this problem.",
+          message:
+            err.response?.data?.message || "Could not load this problem.",
         });
       } finally {
         if (!cancelled) setLoading(false);
@@ -103,14 +128,22 @@ const ProblemPage = () => {
 
   useEffect(() => {
     let cancelled = false;
+
     setSubmissions({ status: "loading", items: [] });
 
     getSubmissions(slug)
       .then((res) => {
-        if (!cancelled) setSubmissions({ status: "ready", items: res.data.submissions });
+        if (!cancelled) {
+          setSubmissions({
+            status: "ready",
+            items: res.data.submissions,
+          });
+        }
       })
       .catch(() => {
-        if (!cancelled) setSubmissions({ status: "failed", items: [] });
+        if (!cancelled) {
+          setSubmissions({ status: "failed", items: [] });
+        }
       });
 
     return () => {
@@ -120,28 +153,52 @@ const ProblemPage = () => {
 
   const execute = async (kind) => {
     const runId = ++runCounter.current;
-    setExecution({ runId, kind, status: "running", data: null, message: "" });
+
+    setExecution({
+      runId,
+      kind,
+      status: "running",
+      data: null,
+      message: "",
+    });
 
     try {
       const res =
         kind === "run"
-          ? await runCode(slug, { language, code, inputs: inputs.slice(0, 5) })
+          ? await runCode(slug, {
+              language,
+              code,
+              inputs: inputs.slice(0, 5),
+            })
           : await submitCode(slug, { language, code });
 
       if (runId !== runCounter.current) return;
 
-      setExecution({ runId, kind, status: "done", data: res.data, message: "" });
+      setExecution({
+        runId,
+        kind,
+        status: "done",
+        data: res.data,
+        message: "",
+      });
 
       if (kind === "submit") {
         const { submissionId, verdict, passed, total } = res.data;
 
         if (verdict === "accepted") setSolved(true);
 
-        // added locally so the Submissions tab is up to date without another request
+        // Update the Submissions tab without another request.
         setSubmissions((prev) => ({
           status: "ready",
           items: [
-            { _id: submissionId, language, verdict, passed, total, createdAt: new Date().toISOString() },
+            {
+              _id: submissionId,
+              language,
+              verdict,
+              passed,
+              total,
+              createdAt: new Date().toISOString(),
+            },
             ...prev.items,
           ],
         }));
@@ -150,15 +207,76 @@ const ProblemPage = () => {
       if (runId !== runCounter.current) return;
 
       const data = err.response?.data;
+
       setExecution({
         runId,
         kind,
         status: "error",
         data: null,
-        message: data?.errors?.code?.[0] || data?.message || "Something went wrong. Please try again.",
+        message:
+          data?.errors?.code?.[0] ||
+          data?.message ||
+          "Something went wrong. Please try again.",
       });
     }
   };
+
+  const startResize = useCallback(
+    (type, event) => {
+      if (window.matchMedia("(max-width: 1023px)").matches) return;
+
+      event.preventDefault();
+
+      resizeState.current = {
+        type,
+        leftWidth,
+        editorHeight,
+      };
+
+      setIsResizing(true);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    },
+    [leftWidth, editorHeight],
+  );
+
+  useEffect(() => {
+    if (!isResizing) return undefined;
+
+    const handlePointerMove = (event) => {
+      const state = resizeState.current;
+      if (!state) return;
+
+      if (state.type === "horizontal" && workspaceRef.current) {
+        const rect = workspaceRef.current.getBoundingClientRect();
+        const usableWidth = rect.width - 12;
+        const next = ((event.clientX - rect.left - 6) / usableWidth) * 100;
+
+        setLeftWidth(Math.max(24, Math.min(55, next)));
+      }
+
+      if (state.type === "vertical" && rightPanelRef.current) {
+        const rect = rightPanelRef.current.getBoundingClientRect();
+        const next = ((event.clientY - rect.top) / rect.height) * 100;
+
+        setEditorHeight(Math.max(30, Math.min(82, next)));
+      }
+    };
+
+    const stopResize = () => {
+      resizeState.current = null;
+      setIsResizing(false);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointercancel", stopResize);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+    };
+  }, [isResizing]);
 
   if (loading) return <PageSkeleton />;
 
@@ -170,12 +288,17 @@ const ProblemPage = () => {
         ) : (
           <CircleAlert className="size-10 text-red-400" />
         )}
+
         <h1 className="mt-4 text-xl font-semibold text-white">
           {error.notFound ? "Problem not found" : "Something went wrong"}
         </h1>
+
         <p className="mt-2 text-sm text-white/45">
-          {error.notFound ? "This problem does not exist or is not available." : error.message}
+          {error.notFound
+            ? "This problem does not exist or is not available."
+            : error.message}
         </p>
+
         <div className="mt-5 flex gap-3">
           {!error.notFound && (
             <button
@@ -186,6 +309,7 @@ const ProblemPage = () => {
               Try again
             </button>
           )}
+
           <Link
             to="/problems"
             className="rounded-lg bg-linear-to-r from-primary-start to-primary-end px-4 py-2 text-sm font-semibold text-white"
@@ -200,55 +324,143 @@ const ProblemPage = () => {
   const running = execution.status === "running" ? execution.kind : null;
 
   return (
-    <div className="grid gap-3 p-3 lg:h-[calc(100dvh-4rem)] lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]">
-      <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-card backdrop-blur-xl">
-        <div className="flex shrink-0 items-center gap-5 border-b border-white/8 px-5">
-          {LEFT_TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setLeftTab(t.id)}
-              className={`-mb-px border-b-2 py-3 text-sm font-medium transition-colors duration-200 ${
-                leftTab === t.id
-                  ? "border-primary-start text-white"
-                  : "border-transparent text-white/45 hover:text-white/75"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+    <div
+      className={`flex h-[calc(100dvh-1rem)] min-h-0 flex-col gap-3 overflow-hidden px-3 pt-3 pb-0 ${
+        isResizing ? "select-none" : ""
+      }`}
+    >
+      <header className="flex h-11 shrink-0 items-center gap-4">
+        <Link
+          to="/"
+          className="text-xl font-bold tracking-tight text-white transition-opacity hover:opacity-85"
+        >
+          Code
+          <span className="bg-linear-to-r from-primary-start to-primary-end bg-clip-text text-transparent">
+            Nexa
+          </span>
+        </Link>
+
+        <Link
+          to="/problems"
+          className="inline-flex items-center gap-2 rounded-lg border border-white/8 bg-card px-3.5 py-2 text-sm font-medium text-white/75 transition-colors hover:border-white/15 hover:text-white"
+        >
+          <ArrowLeft className="size-4" />
+          All problems
+        </Link>
+      </header>
+
+      <div
+        ref={workspaceRef}
+        className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-0"
+      >
+        <section
+          style={{ width: `${leftWidth}%` }}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/8 bg-card lg:flex-none"
+        >
+          <div className="flex shrink-0 items-center gap-5 border-b border-white/8 px-5">
+            {LEFT_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setLeftTab(t.id)}
+                className={`-mb-px border-b-2 py-3 text-sm font-medium transition-colors duration-200 ${
+                  leftTab === t.id
+                    ? "border-primary-start text-white"
+                    : "border-transparent text-white/45 hover:text-white/75"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor:
+                "var(--color-primary-start) var(--color-recessed)",
+            }}
+          >
+            {leftTab === "description" ? (
+              <ProblemDescription problem={problem} solved={solved} />
+            ) : (
+              <SubmissionsList submissions={submissions} />
+            )}
+          </div>
+        </section>
+
+        <div
+          role="separator"
+          aria-label="Resize problem description panel"
+          aria-orientation="vertical"
+          tabIndex={0}
+          onPointerDown={(event) => startResize("horizontal", event)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              setLeftWidth((width) => Math.max(24, width - 2));
+            }
+
+            if (event.key === "ArrowRight") {
+              setLeftWidth((width) => Math.min(55, width + 2));
+            }
+          }}
+          className="group hidden w-3 shrink-0 cursor-col-resize touch-none items-center justify-center lg:flex"
+        >
+          <span className="h-12 w-1 rounded-full bg-white/10 transition-colors group-hover:bg-primary-start/70 group-focus:bg-primary-start" />
         </div>
 
-        <div className="min-h-0 flex-1 lg:overflow-y-auto">
-          {leftTab === "description" ? (
-            <ProblemDescription problem={problem} solved={solved} />
-          ) : (
-            <SubmissionsList submissions={submissions} />
-          )}
-        </div>
-      </div>
+        <section
+          ref={rightPanelRef}
+          style={{ width: `${100 - leftWidth}%` }}
+          className="flex min-h-0 min-w-0 flex-1 flex-col gap-0 lg:flex-none"
+        >
+          <div
+            style={{ height: `${editorHeight}%` }}
+            className="flex min-h-0 flex-col pb-1.5"
+          >
+            <CodeEditor
+              modelPath={`${problem.slug}.${language}`}
+              language={language}
+              onLanguageChange={changeLanguage}
+              code={code}
+              onCodeChange={setCode}
+              onReset={resetCode}
+              onRun={() => execute("run")}
+              onSubmit={() => execute("submit")}
+              running={running}
+            />
+          </div>
 
-      <div className="flex min-h-0 flex-col gap-3">
-        <div className="flex h-[460px] min-h-0 flex-col lg:h-auto lg:flex-1">
-          <CodeEditor
-            modelPath={`${problem.slug}.${language}`}
-            language={language}
-            onLanguageChange={changeLanguage}
-            code={code}
-            onCodeChange={setCode}
-            onReset={resetCode}
-            onRun={() => execute("run")}
-            onSubmit={() => execute("submit")}
-            running={running}
-          />
-        </div>
+          <div
+            role="separator"
+            aria-label="Resize editor and test results"
+            aria-orientation="horizontal"
+            tabIndex={0}
+            onPointerDown={(event) => startResize("vertical", event)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowUp") {
+                setEditorHeight((height) => Math.max(30, height - 2));
+              }
 
-        <TestPanel
-          key={problem.slug}
-          inputs={inputs}
-          onInputChange={changeInput}
-          execution={execution}
-        />
+              if (event.key === "ArrowDown") {
+                setEditorHeight((height) => Math.min(82, height + 2));
+              }
+            }}
+            className="group hidden h-3 shrink-0 cursor-row-resize touch-none items-center justify-center lg:flex"
+          >
+            <span className="h-1 w-12 rounded-full bg-white/10 transition-colors group-hover:bg-primary-start/70 group-focus:bg-primary-start" />
+          </div>
+
+          <div className="min-h-0 flex-1 pt-1.5">
+            <TestPanel
+              key={problem.slug}
+              inputs={inputs}
+              onInputChange={changeInput}
+              execution={execution}
+            />
+          </div>
+        </section>
       </div>
     </div>
   );

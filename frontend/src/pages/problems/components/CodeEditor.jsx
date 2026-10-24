@@ -1,8 +1,13 @@
+
 import Editor from "@monaco-editor/react";
-import { ChevronDown, Play, RotateCcw, Send } from "lucide-react";
+import {
+  ChevronDown,
+  Play,
+  RotateCcw,
+  Send,
+} from "lucide-react";
 import { LANGUAGES } from "../../../lib/languages.js";
 
-// Monaco can't read oklch, so these are hex versions of the same theme colors
 const handleBeforeMount = (monaco) => {
   monaco.editor.defineTheme("codenexa", {
     base: "vs-dark",
@@ -21,7 +26,6 @@ const handleBeforeMount = (monaco) => {
 };
 
 const handleMount = (_editor, monaco) => {
-  // Monaco measures characters once, so it has to re-measure after the font has loaded
   document.fonts.ready.then(() => monaco.editor.remeasureFonts());
 };
 
@@ -40,7 +44,9 @@ const CodeEditor = ({
   onSubmit,
   running,
 }) => {
-  const current = LANGUAGES.find((l) => l.id === language);
+  const current = LANGUAGES.find(
+    (item) => item.id === language
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/8 bg-editor">
@@ -48,15 +54,18 @@ const CodeEditor = ({
         <div className="relative">
           <select
             value={language}
-            onChange={(e) => onLanguageChange(e.target.value)}
+            onChange={(event) =>
+              onLanguageChange(event.target.value)
+            }
             className="appearance-none rounded-lg border border-white/8 bg-editor py-1.5 pl-3 pr-8 text-sm text-white outline-none transition-colors duration-200 hover:border-white/15 focus:border-primary-start/50 [&>option]:bg-background"
           >
-            {LANGUAGES.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.label}
+            {LANGUAGES.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
               </option>
             ))}
           </select>
+
           <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-white/35" />
         </div>
 
@@ -81,7 +90,7 @@ const CodeEditor = ({
               <ButtonSpinner />
             ) : (
               <Play className="size-3.5" />
-            )}{" "}
+            )}
             Run
           </button>
 
@@ -95,7 +104,7 @@ const CodeEditor = ({
               <ButtonSpinner />
             ) : (
               <Send className="size-3.5" />
-            )}{" "}
+            )}
             Submit
           </button>
         </div>
@@ -105,7 +114,7 @@ const CodeEditor = ({
         <Editor
           height="100%"
           path={modelPath}
-          language={current.monaco}
+          language={current?.monaco ?? "plaintext"}
           value={code}
           onChange={(value) => onCodeChange(value ?? "")}
           theme="codenexa"
@@ -122,6 +131,11 @@ const CodeEditor = ({
             automaticLayout: true,
             tabSize: 4,
             padding: { top: 12 },
+            scrollbar: {
+              verticalScrollbarSize: 8,
+              horizontalScrollbarSize: 8,
+              useShadows: false,
+            },
           }}
         />
       </div>
