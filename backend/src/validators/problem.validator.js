@@ -16,4 +16,11 @@ export const runCodeSchema = z.object({
   inputs: z.array(z.string().max(10000)).min(1).max(5).optional(),
 });
 
-export const submitCodeSchema = runCodeSchema.omit({ inputs: true });
+export const submitCodeSchema = runCodeSchema.omit({ inputs: true }).extend({
+  session: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{6}$/, "Invalid room code")
+    .optional(),
+});

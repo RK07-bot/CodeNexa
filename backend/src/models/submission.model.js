@@ -13,6 +13,7 @@ const submissionSchema = new mongoose.Schema(
     },
     passed: { type: Number, required: true },
     total: { type: Number, required: true },
+    session: { type: mongoose.Schema.Types.ObjectId, ref: "Session", default: null },
   },
   { timestamps: true },
 );

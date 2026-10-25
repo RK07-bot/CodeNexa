@@ -3,9 +3,7 @@ import tryCatch from "../middlewares/try-catch.middleware.js";
 import problemModel from "../models/problem.model.js";
 import { listProblemsQuerySchema } from "../validators/problem.validator.js";
 import submissionModel from "../models/submission.model.js";
-
-// the search text goes into a regex, so special characters have to be escaped first
-const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import escapeRegex from "../utils/escapeRegex.js";
 
 const getAcceptanceRate = ({ attempts, accepted }) =>
   attempts > 0 ? Math.round((accepted / attempts) * 100) : null;
