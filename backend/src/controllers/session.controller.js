@@ -15,6 +15,11 @@ import {
   listPublicQuerySchema,
   nextSessionSchema,
 } from "../validators/session.validator.js";
+import { emitToChain } from "../sockets/io.js";
+import { scheduleExpiry, scheduleGrace } from "../jobs/queues/session.queue.js";
+
+const logTimerError = (err) =>
+  console.error("Could not schedule a room timer:", err.message);
 
 const CODE_PATTERN = /^[A-Z0-9]{6}$/;
 
@@ -22,18 +27,30 @@ const fail = (res, status, message, extra = {}) =>
   res.status(status).json({ success: false, message, ...extra });
 
 const invalid = (res, error) =>
-  fail(res, 400, "Invalid request", { errors: z.flattenError(error).fieldErrors });
-
-const alreadyInRoom = (res, room) =>
-  fail(res, 409, "You are already in an open room. Leave it before starting another.", {
-    alreadyInRoom: true,
-    roomCode: room?.roomCode ?? null,
+  fail(res, 400, "Invalid request", {
+    errors: z.flattenError(error).fieldErrors,
   });
 
-const normalizeCode = (value) => String(value ?? "").trim().toUpperCase();
+const alreadyInRoom = (res, room) =>
+  fail(
+    res,
+    409,
+    "You are already in an open room. Leave it before starting another.",
+    {
+      alreadyInRoom: true,
+      roomCode: room?.roomCode ?? null,
+    },
+  );
+
+const normalizeCode = (value) =>
+  String(value ?? "")
+    .trim()
+    .toUpperCase();
 
 const findRoom = (code) =>
-  CODE_PATTERN.test(code) ? sessionModel.findOne({ roomCode: code }).lean() : null;
+  CODE_PATTERN.test(code)
+    ? sessionModel.findOne({ roomCode: code }).lean()
+    : null;
 
 const isMember = (room, userId) =>
   room.participants.some((p) => String(p.user) === String(userId));
@@ -93,7 +110,12 @@ export const createSession = tryCatch(async (req, res) => {
     limit: 5,
     windowSeconds: 60,
   });
-  if (!allowed) return fail(res, 429, "You are creating rooms too quickly. Wait a moment and try again.");
+  if (!allowed)
+    return fail(
+      res,
+      429,
+      "You are creating rooms too quickly. Wait a moment and try again.",
+    );
 
   const problem = await problemModel
     .findOne({ slug: parsed.data.problem, status: "approved" })
@@ -107,13 +129,24 @@ export const createSession = tryCatch(async (req, res) => {
   try {
     const room = await createSessionDoc({
       problem: problem._id,
-      problemInfo: { title: problem.title, slug: problem.slug, difficulty: problem.difficulty },
+      problemInfo: {
+        title: problem.title,
+        slug: problem.slug,
+        difficulty: problem.difficulty,
+      },
       visibility: parsed.data.visibility,
       hostUsername: req.user.username,
-      participants: [{ user: userId, username: req.user.username, role: "host" }],
+      participants: [
+        { user: userId, username: req.user.username, role: "host" },
+      ],
     });
 
-    return res.status(201).json({ success: true, session: serialize(room.toObject(), userId) });
+    // a room nobody joins shouldn't stay listed forever
+    scheduleExpiry(room.roomCode).catch(logTimerError);
+
+    return res
+      .status(201)
+      .json({ success: true, session: serialize(room.toObject(), userId) });
   } catch (err) {
     // the check above passed but another request got in first
     if (isDuplicateOn(err, "participants.user")) {
@@ -142,7 +175,9 @@ export const listPublicSessions = tryCatch(async (req, res) => {
   const [rooms, total] = await Promise.all([
     sessionModel
       .find(filter)
-      .select("roomCode problemInfo hostUsername participants.user status createdAt")
+      .select(
+        "roomCode problemInfo hostUsername participants.user status createdAt",
+      )
       // "waiting" sorts after "active", so descending puts joinable rooms first
       .sort({ status: -1, createdAt: -1, _id: -1 })
       .skip((page - 1) * limit)
@@ -183,7 +218,9 @@ export const getSession = tryCatch(async (req, res) => {
   const room = await findRoom(normalizeCode(req.params.code));
   if (!room) return fail(res, 404, "Room not found");
 
-  return res.status(200).json({ success: true, session: serialize(room, req.user._id) });
+  return res
+    .status(200)
+    .json({ success: true, session: serialize(room, req.user._id) });
 });
 
 export const joinSession = tryCatch(async (req, res) => {
@@ -199,9 +236,11 @@ export const joinSession = tryCatch(async (req, res) => {
 
   // opening the link again from the same account just takes them back in
   if (isMember(room, userId)) {
-    return res
-      .status(200)
-      .json({ success: true, rejoined: true, session: serialize(room, userId) });
+    return res.status(200).json({
+      success: true,
+      rejoined: true,
+      session: serialize(room, userId),
+    });
   }
 
   if (!room.open) return fail(res, 410, "This room has ended");
@@ -217,7 +256,12 @@ export const joinSession = tryCatch(async (req, res) => {
     // one atomic update, the filter only matches while the room is still waiting with one person in it
     joined = await sessionModel
       .findOneAndUpdate(
-        { roomCode: code, status: "waiting", open: true, "participants.1": { $exists: false } },
+        {
+          roomCode: code,
+          status: "waiting",
+          open: true,
+          "participants.1": { $exists: false },
+        },
         {
           $push: {
             participants: {
@@ -243,13 +287,24 @@ export const joinSession = tryCatch(async (req, res) => {
   // someone else took the seat between the check and the update
   if (!joined) return fail(res, 409, "This room just filled up");
 
-  return res.status(200).json({ success: true, session: serialize(joined, userId) });
+  // the guest has the grace period to open the room page, otherwise the host waits for nobody
+  scheduleGrace(code, userId).catch(logTimerError);
+  emitToChain(joined.chainId, "session:updated", {
+    roomCode: code,
+    status: joined.status,
+  });
+
+  return res
+    .status(200)
+    .json({ success: true, session: serialize(joined, userId) });
 });
 
 // finds the room and makes sure the caller is in it, a stranger just sees "not found"
 const loadAsMember = async (req, res) => {
   const room = await findRoom(normalizeCode(req.params.code));
-  const me = room?.participants.find((p) => String(p.user) === String(req.user._id));
+  const me = room?.participants.find(
+    (p) => String(p.user) === String(req.user._id),
+  );
 
   if (!room || !me) {
     fail(res, 404, "Room not found");
@@ -265,8 +320,10 @@ export const cancelSession = tryCatch(async (req, res) => {
 
   const { room, me } = found;
 
-  if (me.role !== "host") return fail(res, 403, "Only the host can cancel a room");
-  if (room.status !== "waiting") return fail(res, 409, "Only a waiting room can be cancelled");
+  if (me.role !== "host")
+    return fail(res, 403, "Only the host can cancel a room");
+  if (room.status !== "waiting")
+    return fail(res, 409, "Only a waiting room can be cancelled");
 
   const closed = await closeSession(room, {
     status: "abandoned",
@@ -274,6 +331,11 @@ export const cancelSession = tryCatch(async (req, res) => {
     endedBy: req.user._id,
   });
   if (!closed) return fail(res, 409, "This room is no longer waiting");
+  emitToChain(closed.chainId, "session:updated", {
+    roomCode: closed.roomCode,
+    status: closed.status,
+    endReason: closed.endReason,
+  });
 
   return res.status(200).json({ success: true, message: "Room cancelled" });
 });
@@ -284,7 +346,8 @@ export const endSession = tryCatch(async (req, res) => {
 
   const { room } = found;
 
-  if (room.status !== "active") return fail(res, 409, "This session is not active");
+  if (room.status !== "active")
+    return fail(res, 409, "This session is not active");
 
   // either person can end it, it ends for both
   const closed = await closeSession(room, {
@@ -293,8 +356,17 @@ export const endSession = tryCatch(async (req, res) => {
     endedBy: req.user._id,
   });
   if (!closed) return fail(res, 409, "This session has already ended");
+  emitToChain(closed.chainId, "session:updated", {
+    roomCode: closed.roomCode,
+    status: closed.status,
+    endReason: closed.endReason,
+    endedBy: req.user.username,
+  });
 
-  return res.status(200).json({ success: true, session: serialize(closed.toObject(), req.user._id) });
+  return res.status(200).json({
+    success: true,
+    session: serialize(closed.toObject(), req.user._id),
+  });
 });
 
 export const startNextSession = tryCatch(async (req, res) => {
@@ -306,13 +378,21 @@ export const startNextSession = tryCatch(async (req, res) => {
 
   const { room, me } = found;
 
-  if (me.role !== "host") return fail(res, 403, "Only the host can pick the next problem");
+  if (me.role !== "host")
+    return fail(res, 403, "Only the host can pick the next problem");
   if (room.visibility !== "private") {
-    return fail(res, 400, "Only private rooms can continue with another problem");
+    return fail(
+      res,
+      400,
+      "Only private rooms can continue with another problem",
+    );
   }
-  if (room.status !== "completed") return fail(res, 409, "End the current session first");
+  if (room.status !== "completed")
+    return fail(res, 409, "End the current session first");
   if (room.nextRoomCode) {
-    return fail(res, 409, "The next session has already started", { roomCode: room.nextRoomCode });
+    return fail(res, 409, "The next session has already started", {
+      roomCode: room.nextRoomCode,
+    });
   }
 
   const problem = await problemModel
@@ -329,7 +409,11 @@ export const startNextSession = tryCatch(async (req, res) => {
       chainId: room.chainId,
       previousSession: room._id,
       problem: problem._id,
-      problemInfo: { title: problem.title, slug: problem.slug, difficulty: problem.difficulty },
+      problemInfo: {
+        title: problem.title,
+        slug: problem.slug,
+        difficulty: problem.difficulty,
+      },
       visibility: "private",
       hostUsername: room.hostUsername,
       status: "active",
@@ -343,11 +427,26 @@ export const startNextSession = tryCatch(async (req, res) => {
       })),
     });
 
-    await sessionModel.updateOne({ _id: room._id }, { $set: { nextRoomCode: next.roomCode } });
+    await sessionModel.updateOne(
+      { _id: room._id },
+      { $set: { nextRoomCode: next.roomCode } },
+    );
+    // anyone who had already dropped gets the grace period to come back to the new room
+    next.participants
+      .filter((p) => !p.connected)
+      .forEach((p) =>
+        scheduleGrace(next.roomCode, p.user).catch(logTimerError),
+      );
 
-    return res
-      .status(201)
-      .json({ success: true, session: serialize(next.toObject(), req.user._id) });
+    emitToChain(next.chainId, "session:next", {
+      roomCode: next.roomCode,
+      problem: next.problemInfo,
+    });
+
+    return res.status(201).json({
+      success: true,
+      session: serialize(next.toObject(), req.user._id),
+    });
   } catch (err) {
     if (isDuplicateOn(err, "participants.user")) {
       const started = await sessionModel
@@ -356,7 +455,9 @@ export const startNextSession = tryCatch(async (req, res) => {
         .lean();
 
       return started
-        ? fail(res, 409, "The next session has already started", { roomCode: started.roomCode })
+        ? fail(res, 409, "The next session has already started", {
+            roomCode: started.roomCode,
+          })
         : fail(res, 409, "One of you is already in another open room");
     }
     throw err;
