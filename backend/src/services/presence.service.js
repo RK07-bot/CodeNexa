@@ -20,7 +20,7 @@ export const markConnected = async (roomCode, userId) => {
 export const markDisconnected = async (roomCode, userId) => {
   const session = await sessionModel
     .findOneAndUpdate(
-      { roomCode, "participants.user": userId },
+      { roomCode, participants: { $elemMatch: { user: userId, connected: true } } },
       {
         $set: {
           "participants.$.connected": false,

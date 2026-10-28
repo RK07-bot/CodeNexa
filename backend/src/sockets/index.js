@@ -11,6 +11,7 @@ import { chainRoom, emitToChain, setIo, userRoom } from "./io.js";
 
 const CODE_PATTERN = /^[A-Z0-9]{6}$/;
 const CODE_EVENTS = ["code:update", "code:sync-request", "code:sync-reply"];
+const DESCRIPTION_TYPES = ["offer", "answer", "pranswer", "rollback"];
 
 const readCookie = (header = "", name) => {
   const entry = header
@@ -44,6 +45,34 @@ const createLimiter = (max, windowMs) => {
     }
     return ++count <= max;
   };
+};
+
+// signals are relayed, so only the known fields get through and nothing else can ride along
+const cleanSignal = (payload) => {
+  const { description, candidate } = payload ?? {};
+  const signal = {};
+
+  if (description) {
+    const validType = DESCRIPTION_TYPES.includes(description.type);
+    const validSdp = typeof description.sdp === "string" && description.sdp.length <= 60000;
+    if (!validType || !validSdp) return null;
+
+    signal.description = { type: description.type, sdp: description.sdp };
+  }
+
+  if (candidate) {
+    if (typeof candidate.candidate !== "string" || candidate.candidate.length > 2000) return null;
+
+    signal.candidate = {
+      candidate: candidate.candidate,
+      sdpMid: typeof candidate.sdpMid === "string" ? candidate.sdpMid : null,
+      sdpMLineIndex: Number.isInteger(candidate.sdpMLineIndex) ? candidate.sdpMLineIndex : null,
+      usernameFragment:
+        typeof candidate.usernameFragment === "string" ? candidate.usernameFragment : null,
+    };
+  }
+
+  return signal.description || signal.candidate ? signal : null;
 };
 
 // every handler answers with an ack and a crash in one never takes the server down
@@ -88,6 +117,13 @@ export const initSockets = (httpServer) => {
   io.on("connection", (socket) => {
     const { userId, username } = socket.data;
     const allowCodeEvent = createLimiter(200, 1000);
+    const allowRtcEvent = createLimiter(100, 1000);
+
+    // the chain this socket is really in right now, a takeover removes it from the room
+    const activeChain = () => {
+      const { chainId } = socket.data;
+      return chainId && socket.rooms.has(chainRoom(chainId)) ? chainId : null;
+    };
 
     socket.join(userRoom(userId));
 
@@ -111,6 +147,15 @@ export const initSockets = (httpServer) => {
         socket.data.roomCode = code;
         socket.join(chainRoom(session.chainId));
 
+        // opening the room somewhere else takes over this person's seat
+        const inRoom = await io.in(chainRoom(session.chainId)).fetchSockets();
+        for (const other of inRoom) {
+          if (other.id !== socket.id && other.data.userId === userId) {
+            other.emit("room:taken-over", { roomCode: code });
+            other.leave(chainRoom(session.chainId));
+          }
+        }
+
         const updated = await markConnected(code, userId);
         emitToChain(session.chainId, "presence:update", presencePayload(updated));
 
@@ -118,10 +163,34 @@ export const initSockets = (httpServer) => {
       }),
     );
 
+    // leaving the room page counts as leaving the call, the grace period starts from here
+    socket.on(
+      "room:leave",
+      handle(async (_payload, reply) => {
+        const { chainId, roomCode } = socket.data;
+        if (!chainId) return reply({ ok: true });
+
+        socket.leave(chainRoom(chainId));
+        socket.data.chainId = null;
+        socket.data.roomCode = null;
+
+        // another tab of the same person may still be in the room
+        const inRoom = await io.in(chainRoom(chainId)).fetchSockets();
+
+        if (!inRoom.some((s) => s.data.userId === userId)) {
+          const session = await markDisconnected(roomCode, userId);
+          if (session) emitToChain(session.chainId, "presence:update", presencePayload(session));
+        }
+
+        reply({ ok: true });
+      }),
+    );
+
     socket.on(
       "chat:send",
       handle(async ({ text }, reply) => {
-        if (!socket.data.chainId) return reply({ ok: false, message: "Join a room first" });
+        const chainId = activeChain();
+        if (!chainId) return reply({ ok: false, message: "Join a room first" });
 
         const message = String(text ?? "").trim();
         if (!message || message.length > 500) {
@@ -135,7 +204,7 @@ export const initSockets = (httpServer) => {
         });
         if (!allowed) return reply({ ok: false, message: "You are sending messages too quickly" });
 
-        io.to(chainRoom(socket.data.chainId)).emit("chat:message", {
+        io.to(chainRoom(chainId)).emit("chat:message", {
           id: randomUUID(),
           roomCode: socket.data.roomCode,
           username, // taken from the login, never from the client
@@ -149,10 +218,32 @@ export const initSockets = (httpServer) => {
 
     for (const event of CODE_EVENTS) {
       socket.on(event, (payload) => {
-        if (!socket.data.chainId || !allowCodeEvent()) return;
-        socket.to(chainRoom(socket.data.chainId)).emit(event, payload);
+        const chainId = activeChain();
+        if (!chainId || !allowCodeEvent()) return;
+        socket.to(chainRoom(chainId)).emit(event, payload);
       });
     }
+
+    // offers, answers and ICE candidates for the video call, passed to the other person untouched
+    socket.on("rtc:signal", (payload) => {
+      const chainId = activeChain();
+      if (!chainId || !allowRtcEvent()) return;
+
+      const signal = cleanSignal(payload);
+      if (signal) socket.to(chainRoom(chainId)).emit("rtc:signal", signal);
+    });
+
+    // the other side can't tell a muted mic from silence, so each browser announces its own state
+    socket.on("media:state", (payload) => {
+      const chainId = activeChain();
+      if (!chainId || !allowRtcEvent()) return;
+
+      socket.to(chainRoom(chainId)).emit("media:state", {
+        audio: Boolean(payload?.audio),
+        video: Boolean(payload?.video),
+        screen: Boolean(payload?.screen),
+      });
+    });
 
     socket.on("disconnect", async () => {
       try {

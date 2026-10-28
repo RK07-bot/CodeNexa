@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CircleAlert, SearchX } from "lucide-react";
@@ -36,15 +37,23 @@ const getSavedLanguage = () => {
 };
 
 const PageSkeleton = () => (
-  <div className="grid animate-pulse gap-3 p-3 lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-2">
-    <div className="space-y-4 rounded-2xl border border-white/8 bg-card p-6">
-      <div className="h-6 w-1/2 rounded bg-white/8" />
-      <div className="h-4 w-1/3 rounded bg-white/5" />
-      <div className="h-3 w-full rounded bg-white/5" />
-      <div className="h-3 w-5/6 rounded bg-white/5" />
-      <div className="h-3 w-2/3 rounded bg-white/5" />
+  <div className="min-h-[calc(100dvh-1rem)] animate-pulse p-3 lg:h-[calc(100dvh-1rem)] lg:min-h-0">
+    <div className="mb-3 flex h-11 items-center gap-4">
+      <div className="h-6 w-28 rounded bg-white/8" />
+      <div className="h-9 w-32 rounded-lg bg-white/5" />
     </div>
-    <div className="min-h-80 rounded-2xl border border-white/8 bg-editor" />
+
+    <div className="grid gap-3 lg:h-[calc(100%-3.75rem)] lg:min-h-0 lg:grid-cols-2">
+      <div className="min-h-80 space-y-4 overflow-hidden rounded-2xl border border-white/8 bg-card p-6">
+        <div className="h-6 w-1/2 rounded bg-white/8" />
+        <div className="h-4 w-1/3 rounded bg-white/5" />
+        <div className="h-3 w-full rounded bg-white/5" />
+        <div className="h-3 w-5/6 rounded bg-white/5" />
+        <div className="h-3 w-2/3 rounded bg-white/5" />
+      </div>
+
+      <div className="min-h-80 rounded-2xl border border-white/8 bg-editor" />
+    </div>
   </div>
 );
 
@@ -68,7 +77,7 @@ const ProblemPage = () => {
     items: [],
   });
 
-  // Resizable workspace panels
+  // Resizable workspace panels.
   const [leftWidth, setLeftWidth] = useState(32);
   const [editorHeight, setEditorHeight] = useState(66);
   const [isResizing, setIsResizing] = useState(false);
@@ -282,7 +291,7 @@ const ProblemPage = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center px-4 text-center">
+      <div className="flex min-h-[calc(100dvh-1rem)] flex-col items-center justify-center px-4 py-8 text-center lg:h-[calc(100dvh-1rem)] lg:min-h-0">
         {error.notFound ? (
           <SearchX className="size-10 text-white/30" />
         ) : (
@@ -325,7 +334,7 @@ const ProblemPage = () => {
 
   return (
     <div
-      className={`flex h-[calc(100dvh-1rem)] min-h-0 flex-col gap-3 overflow-hidden px-3 pt-3 pb-0 ${
+      className={`flex min-h-[calc(100dvh-1rem)] flex-col gap-3 px-3 pt-3 pb-3 lg:h-[calc(100dvh-1rem)] lg:min-h-0 lg:overflow-hidden lg:pb-0 ${
         isResizing ? "select-none" : ""
       }`}
     >
@@ -354,8 +363,8 @@ const ProblemPage = () => {
         className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-0"
       >
         <section
-          style={{ width: `${leftWidth}%` }}
-          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/8 bg-card lg:flex-none"
+          style={{ "--panel": `${leftWidth}%` }}
+          className="flex w-full min-h-0 min-w-0 max-h-[75vh] flex-col overflow-hidden rounded-2xl border border-white/8 bg-card lg:max-h-none lg:w-(--panel) lg:flex-none"
         >
           <div className="flex shrink-0 items-center gap-5 border-b border-white/8 px-5">
             {LEFT_TABS.map((t) => (
@@ -412,12 +421,12 @@ const ProblemPage = () => {
 
         <section
           ref={rightPanelRef}
-          style={{ width: `${100 - leftWidth}%` }}
-          className="flex min-h-0 min-w-0 flex-1 flex-col gap-0 lg:flex-none"
+          style={{ "--panel": `${100 - leftWidth}%` }}
+          className="flex w-full min-h-0 min-w-0 flex-col gap-0 lg:w-(--panel) lg:flex-none"
         >
           <div
-            style={{ height: `${editorHeight}%` }}
-            className="flex min-h-0 flex-col pb-1.5"
+            style={{ "--editor": `${editorHeight}%` }}
+            className="flex h-[480px] min-h-0 flex-col pb-1.5 lg:h-(--editor)"
           >
             <CodeEditor
               modelPath={`${problem.slug}.${language}`}
@@ -452,7 +461,7 @@ const ProblemPage = () => {
             <span className="h-1 w-12 rounded-full bg-white/10 transition-colors group-hover:bg-primary-start/70 group-focus:bg-primary-start" />
           </div>
 
-          <div className="min-h-0 flex-1 pt-1.5">
+          <div className="h-72 min-h-0 pt-1.5 lg:h-auto lg:flex-1">
             <TestPanel
               key={problem.slug}
               inputs={inputs}

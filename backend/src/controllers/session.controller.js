@@ -1,4 +1,5 @@
 import { z } from "zod";
+import config from "../config/env.js"
 import tryCatch from "../middlewares/try-catch.middleware.js";
 import problemModel from "../models/problem.model.js";
 import sessionModel from "../models/session.model.js";
@@ -462,4 +463,13 @@ export const startNextSession = tryCatch(async (req, res) => {
     }
     throw err;
   }
+});
+
+
+export const getIceServers = tryCatch(async (req, res) => {
+  // TURN bandwidth costs money, so only people in a live room get the list
+  const room = await findOpenSession(req.user._id);
+  if (!room) return fail(res, 403, "Join a room first");
+
+  return res.status(200).json({ success: true, iceServers: config.ICE_SERVERS });
 });

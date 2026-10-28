@@ -38,7 +38,7 @@ if (!process.env.ONLINECOMPILER_API_KEY) {
   );
 }
 
-if (!process.env.RECONNECT_GRACE_SECONDS ) {
+if (!process.env.RECONNECT_GRACE_SECONDS) {
   throw new Error(
     "RECONNECT_GRACE_SECOND IS NOT DEFINED IN ENVVIRONMENT VARIABLES",
   );
@@ -65,6 +65,17 @@ const config = {
   RECONNECT_GRACE_SECONDS: Number(process.env.RECONNECT_GRACE_SECONDS) || 60,
   WAITING_ROOM_EXPIRY_MINUTES:
     Number(process.env.WAITING_ROOM_EXPIRY_MINUTES) || 30,
+  // STUN works for most calls, TURN entries go here as extra objects when needed
+  ICE_SERVERS: process.env.ICE_SERVERS
+    ? JSON.parse(process.env.ICE_SERVERS)
+    : [
+        {
+          urls: [
+            "stun:stun.l.google.com:19302",
+            "stun:stun.cloudflare.com:3478",
+          ],
+        },
+      ],
 };
 
 export default config;
