@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Search, ChevronDown } from "lucide-react";
+import Pills from "../../../components/Pills.jsx";
 
 const difficulties = [
   { value: "", label: "All" },
@@ -17,35 +18,6 @@ const progressOptions = [
 
 const inputStyles =
   "w-full rounded-xl border border-white/8 bg-recessed text-sm text-white outline-none transition-all duration-200 hover:border-white/12 focus:border-primary-start/50 focus:bg-editor focus:ring-2 focus:ring-primary-start/10";
-
-const Pills = ({ options, value, onChange, layoutId }) => (
-  <div className="flex flex-wrap items-center gap-2">
-    {options.map((o) => {
-      const active = value === o.value;
-
-      return (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={`relative rounded-full border border-white/8 px-4 py-2 text-sm font-medium transition-colors duration-200 ${
-            active ? "text-white" : "text-white/55 hover:text-white"
-          }`}
-        >
-          {active && (
-            // one shared highlight that slides between pills
-            <motion.span
-              layoutId={layoutId}
-              className="absolute -inset-px rounded-full bg-linear-to-r from-primary-start to-primary-end"
-              transition={{ type: "spring", stiffness: 400, damping: 32 }}
-            />
-          )}
-          <span className="relative">{o.label}</span>
-        </button>
-      );
-    })}
-  </div>
-);
 
 const ProblemFilters = ({
   searchInput,
@@ -71,7 +43,12 @@ const ProblemFilters = ({
         />
       </div>
 
-      <Pills options={difficulties} value={difficulty} onChange={onDifficultyChange} layoutId="difficulty-pill" />
+      <Pills
+        options={difficulties}
+        value={difficulty}
+        onChange={onDifficultyChange}
+        layoutId="difficulty-pill"
+      />
 
       <div className="relative lg:w-48">
         <select
@@ -91,7 +68,12 @@ const ProblemFilters = ({
     </div>
 
     <div className="border-t border-white/8 pt-3">
-      <Pills options={progressOptions} value={progress} onChange={onProgressChange} layoutId="progress-pill" />
+      <Pills
+        options={progressOptions}
+        value={progress}
+        onChange={onProgressChange}
+        layoutId="progress-pill"
+      />
     </div>
   </div>
 );

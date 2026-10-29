@@ -10,6 +10,8 @@ import HomePage from "./pages/home/HomePage.jsx";
 import ProblemsPage from "./pages/problems/ProblemsPage.jsx";
 import SubmitProblemPage from "./pages/submit/SubmitProblemPage.jsx";
 import ProblemPage from "./pages/problems/ProblemPage.jsx";
+import SessionPage from "./pages/session/SessionPage.jsx";
+import RoomsPage from "./pages/rooms/RoomsPage.jsx";
 
 function App() {
   return (
@@ -40,13 +42,29 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Problems, Dashboard, Rooms, Submit, Admin, Session routes go here as we build them */}
+        <Route
+          path="/rooms"
+          element={
+            <ProtectedRoute>
+              <RoomsPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
       <Route
         path="/problems/:slug"
         element={
           <ProtectedRoute>
             <ProblemPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/session/:code"
+        element={
+          <ProtectedRoute>
+            <SessionPage />
           </ProtectedRoute>
         }
       />

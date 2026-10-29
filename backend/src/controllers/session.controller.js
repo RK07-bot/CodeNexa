@@ -1,5 +1,5 @@
 import { z } from "zod";
-import config from "../config/env.js"
+import config from "../config/env.js";
 import tryCatch from "../middlewares/try-catch.middleware.js";
 import problemModel from "../models/problem.model.js";
 import sessionModel from "../models/session.model.js";
@@ -16,7 +16,7 @@ import {
   listPublicQuerySchema,
   nextSessionSchema,
 } from "../validators/session.validator.js";
-import { emitToChain } from "../sockets/io.js";
+import { emitToChain, emitToLobby } from "../sockets/io.js";
 import { scheduleExpiry, scheduleGrace } from "../jobs/queues/session.queue.js";
 
 const logTimerError = (err) =>
@@ -74,6 +74,7 @@ const serialize = (room, userId) => {
     problem: room.problemInfo,
     visibility: room.visibility,
     status: room.status,
+    createdAt: room.createdAt,
     host: { username: room.hostUsername },
     participantCount: room.participants.length,
     startedAt: room.startedAt ?? null,
@@ -144,6 +145,7 @@ export const createSession = tryCatch(async (req, res) => {
 
     // a room nobody joins shouldn't stay listed forever
     scheduleExpiry(room.roomCode).catch(logTimerError);
+    if (room.visibility === "public") emitToLobby();
 
     return res
       .status(201)
@@ -294,6 +296,7 @@ export const joinSession = tryCatch(async (req, res) => {
     roomCode: code,
     status: joined.status,
   });
+  if (joined.visibility === "public") emitToLobby();
 
   return res
     .status(200)
@@ -337,6 +340,7 @@ export const cancelSession = tryCatch(async (req, res) => {
     status: closed.status,
     endReason: closed.endReason,
   });
+  if (closed.visibility === "public") emitToLobby();
 
   return res.status(200).json({ success: true, message: "Room cancelled" });
 });
@@ -363,6 +367,7 @@ export const endSession = tryCatch(async (req, res) => {
     endReason: closed.endReason,
     endedBy: req.user.username,
   });
+  if (closed.visibility === "public") emitToLobby();
 
   return res.status(200).json({
     success: true,
@@ -465,11 +470,12 @@ export const startNextSession = tryCatch(async (req, res) => {
   }
 });
 
-
 export const getIceServers = tryCatch(async (req, res) => {
   // TURN bandwidth costs money, so only people in a live room get the list
   const room = await findOpenSession(req.user._id);
   if (!room) return fail(res, 403, "Join a room first");
 
-  return res.status(200).json({ success: true, iceServers: config.ICE_SERVERS });
+  return res
+    .status(200)
+    .json({ success: true, iceServers: config.ICE_SERVERS });
 });

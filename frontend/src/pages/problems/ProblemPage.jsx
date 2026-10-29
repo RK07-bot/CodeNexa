@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CircleAlert, SearchX } from "lucide-react";
@@ -15,12 +14,14 @@ import ProblemDescription from "./components/ProblemDescription.jsx";
 import SubmissionsList from "./components/SubmissionsList.jsx";
 import CodeEditor from "./components/CodeEditor.jsx";
 import TestPanel from "./components/TestPanel.jsx";
+import PartnerPractice from "./components/PartnerPractice.jsx";
 
 const LANGUAGE_KEY = "codenexa:language";
 
 const LEFT_TABS = [
   { id: "description", label: "Description" },
   { id: "submissions", label: "Submissions" },
+  { id: "partner", label: "Practice with a partner" },
 ];
 
 const IDLE = {
@@ -372,7 +373,7 @@ const ProblemPage = () => {
                 key={t.id}
                 type="button"
                 onClick={() => setLeftTab(t.id)}
-                className={`-mb-px border-b-2 py-3 text-sm font-medium transition-colors duration-200 ${
+                className={`-mb-px whitespace-nowrap border-b-2 py-3 text-sm font-medium transition-colors duration-200 ${
                   leftTab === t.id
                     ? "border-primary-start text-white"
                     : "border-transparent text-white/45 hover:text-white/75"
@@ -391,9 +392,13 @@ const ProblemPage = () => {
                 "var(--color-primary-start) var(--color-recessed)",
             }}
           >
-            {leftTab === "description" ? (
+            {leftTab === "description" && (
               <ProblemDescription problem={problem} solved={solved} />
-            ) : (
+            )}
+
+            {leftTab === "partner" && <PartnerPractice problem={problem} />}
+
+            {leftTab === "submissions" && (
               <SubmissionsList submissions={submissions} />
             )}
           </div>

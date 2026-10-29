@@ -8,7 +8,7 @@ import ProblemRow, {
   ProblemRowSkeleton,
   ROW_GRID,
 } from "./components/ProblemRow.jsx";
-import Pagination from "./components/Pagination.jsx";
+import Pagination from "../../components/Pagination.jsx";
 
 const ProblemsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();

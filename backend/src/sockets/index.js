@@ -6,8 +6,11 @@ import userModel from "../models/user.model.js";
 import sessionModel from "../models/session.model.js";
 import rateLimiter from "../utils/rateLimiter.js";
 import { findOpenSession } from "../services/session.service.js";
-import { markConnected, markDisconnected } from "../services/presence.service.js";
-import { chainRoom, emitToChain, setIo, userRoom } from "./io.js";
+import {
+  markConnected,
+  markDisconnected,
+} from "../services/presence.service.js";
+import { chainRoom, emitToChain, setIo, userRoom, LOBBY_ROOM } from "./io.js";
 
 const CODE_PATTERN = /^[A-Z0-9]{6}$/;
 const CODE_EVENTS = ["code:update", "code:sync-request", "code:sync-reply"];
@@ -54,21 +57,30 @@ const cleanSignal = (payload) => {
 
   if (description) {
     const validType = DESCRIPTION_TYPES.includes(description.type);
-    const validSdp = typeof description.sdp === "string" && description.sdp.length <= 60000;
+    const validSdp =
+      typeof description.sdp === "string" && description.sdp.length <= 60000;
     if (!validType || !validSdp) return null;
 
     signal.description = { type: description.type, sdp: description.sdp };
   }
 
   if (candidate) {
-    if (typeof candidate.candidate !== "string" || candidate.candidate.length > 2000) return null;
+    if (
+      typeof candidate.candidate !== "string" ||
+      candidate.candidate.length > 2000
+    )
+      return null;
 
     signal.candidate = {
       candidate: candidate.candidate,
       sdpMid: typeof candidate.sdpMid === "string" ? candidate.sdpMid : null,
-      sdpMLineIndex: Number.isInteger(candidate.sdpMLineIndex) ? candidate.sdpMLineIndex : null,
+      sdpMLineIndex: Number.isInteger(candidate.sdpMLineIndex)
+        ? candidate.sdpMLineIndex
+        : null,
       usernameFragment:
-        typeof candidate.usernameFragment === "string" ? candidate.usernameFragment : null,
+        typeof candidate.usernameFragment === "string"
+          ? candidate.usernameFragment
+          : null,
     };
   }
 
@@ -102,7 +114,10 @@ export const initSockets = (httpServer) => {
       if (!token) return next(new Error("Not authenticated"));
 
       const decoded = jwt.verify(token, config.ACCESS_JWT_SECRET);
-      const user = await userModel.findById(decoded.id).select("username").lean();
+      const user = await userModel
+        .findById(decoded.id)
+        .select("username")
+        .lean();
       if (!user) return next(new Error("Not authenticated"));
 
       socket.data.userId = String(user._id);
@@ -130,8 +145,11 @@ export const initSockets = (httpServer) => {
     socket.on(
       "room:join",
       handle(async ({ roomCode }, reply) => {
-        const code = String(roomCode ?? "").trim().toUpperCase();
-        if (!CODE_PATTERN.test(code)) return reply({ ok: false, message: "Invalid room code" });
+        const code = String(roomCode ?? "")
+          .trim()
+          .toUpperCase();
+        if (!CODE_PATTERN.test(code))
+          return reply({ ok: false, message: "Invalid room code" });
 
         const session = await sessionModel
           .findOne({ roomCode: code, "participants.user": userId })
@@ -157,7 +175,11 @@ export const initSockets = (httpServer) => {
         }
 
         const updated = await markConnected(code, userId);
-        emitToChain(session.chainId, "presence:update", presencePayload(updated));
+        emitToChain(
+          session.chainId,
+          "presence:update",
+          presencePayload(updated),
+        );
 
         reply({ ok: true, roomCode: code });
       }),
@@ -179,12 +201,20 @@ export const initSockets = (httpServer) => {
 
         if (!inRoom.some((s) => s.data.userId === userId)) {
           const session = await markDisconnected(roomCode, userId);
-          if (session) emitToChain(session.chainId, "presence:update", presencePayload(session));
+          if (session)
+            emitToChain(
+              session.chainId,
+              "presence:update",
+              presencePayload(session),
+            );
         }
 
         reply({ ok: true });
       }),
     );
+
+    socket.on("lobby:subscribe", () => socket.join(LOBBY_ROOM));
+    socket.on("lobby:unsubscribe", () => socket.leave(LOBBY_ROOM));
 
     socket.on(
       "chat:send",
@@ -194,7 +224,10 @@ export const initSockets = (httpServer) => {
 
         const message = String(text ?? "").trim();
         if (!message || message.length > 500) {
-          return reply({ ok: false, message: "Messages must be 1 to 500 characters" });
+          return reply({
+            ok: false,
+            message: "Messages must be 1 to 500 characters",
+          });
         }
 
         const { allowed } = await rateLimiter({
@@ -202,7 +235,11 @@ export const initSockets = (httpServer) => {
           limit: 15,
           windowSeconds: 10,
         });
-        if (!allowed) return reply({ ok: false, message: "You are sending messages too quickly" });
+        if (!allowed)
+          return reply({
+            ok: false,
+            message: "You are sending messages too quickly",
+          });
 
         io.to(chainRoom(chainId)).emit("chat:message", {
           id: randomUUID(),
@@ -251,11 +288,18 @@ export const initSockets = (httpServer) => {
         if (io.sockets.adapter.rooms.get(userRoom(userId))?.size) return;
 
         const open = await findOpenSession(userId);
-        const codes = new Set([socket.data.roomCode, open?.roomCode].filter(Boolean));
+        const codes = new Set(
+          [socket.data.roomCode, open?.roomCode].filter(Boolean),
+        );
 
         for (const code of codes) {
           const session = await markDisconnected(code, userId);
-          if (session) emitToChain(session.chainId, "presence:update", presencePayload(session));
+          if (session)
+            emitToChain(
+              session.chainId,
+              "presence:update",
+              presencePayload(session),
+            );
         }
       } catch (err) {
         console.error("Disconnect handling failed:", err.message);

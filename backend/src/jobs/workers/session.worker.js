@@ -2,7 +2,7 @@ import { Worker } from "bullmq";
 import { redisConnection } from "../../config/redis.js";
 import sessionModel from "../../models/session.model.js";
 import { closeSession } from "../../services/session.service.js";
-import { emitToChain } from "../../sockets/io.js";
+import { emitToChain,emitToLobby } from "../../sockets/io.js";
 
 const giveUp = async (session, endReason) => {
   const closed = await closeSession(session, { status: "abandoned", endReason });
@@ -14,6 +14,7 @@ const giveUp = async (session, endReason) => {
       status: closed.status,
       endReason,
     });
+    if (closed.visibility === "public") emitToLobby();
   }
 };
 

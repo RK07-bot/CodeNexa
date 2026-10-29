@@ -19,7 +19,7 @@ const getPageNumbers = (current, total) => {
 const arrowStyles =
   "grid size-9 place-items-center rounded-lg border border-white/8 text-white/55 transition-colors duration-200 hover:border-white/15 hover:text-white disabled:pointer-events-none disabled:opacity-40";
 
-const Pagination = ({ page, totalPages, total, limit, onPageChange, onLimitChange }) => {
+const Pagination = ({ page, totalPages, total, limit, onPageChange, onLimitChange, noun = "problems", }) => {
   const from = (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
 
@@ -29,7 +29,7 @@ const Pagination = ({ page, totalPages, total, limit, onPageChange, onLimitChang
   return (
     <div className="mt-5 flex flex-col items-center justify-between gap-4 sm:flex-row">
       <p className="text-sm text-white/45">
-        Showing {from}-{to} of {total} problems
+       Showing {from}-{to} of {total} {noun}
       </p>
 
       <div className="flex items-center gap-1.5">
