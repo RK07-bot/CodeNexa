@@ -19,6 +19,10 @@ import {
 import { emitToChain, emitToLobby } from "../sockets/io.js";
 import { scheduleExpiry, scheduleGrace } from "../jobs/queues/session.queue.js";
 
+
+
+
+
 const logTimerError = (err) =>
   console.error("Could not schedule a room timer:", err.message);
 
@@ -83,6 +87,7 @@ const serialize = (room, userId) => {
     durationSeconds: room.durationSeconds,
     isParticipant: Boolean(me),
     isHost: me?.role === "host",
+    serverTime: new Date().toISOString(),
   };
 
   // member details are only for people who are actually in the room

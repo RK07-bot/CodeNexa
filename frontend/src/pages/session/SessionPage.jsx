@@ -10,6 +10,9 @@ import Workspace from "./components/Workspace.jsx";
 import EndedView from "./components/EndedView.jsx";
 import TakenOver from "./components/TakenOver.jsx";
 
+// how far this computer's clock is from the server's, so countdowns use the server's time
+const offsetFrom = (serverTime) => (serverTime ? Date.parse(serverTime) - Date.now() : 0);
+
 const SessionPage = () => {
   const { code: rawCode } = useParams();
   const code = (rawCode ?? "").toUpperCase();
@@ -20,6 +23,8 @@ const SessionPage = () => {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
   const [presence, setPresence] = useState(null);
+  const [chat, setChat] = useState({ chainId: null, messages: [] });
+  const [clockOffset, setClockOffset] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   const loadedFor = useRef(null);
 
@@ -39,7 +44,14 @@ const SessionPage = () => {
     getSession(code)
       .then((res) => {
         if (cancelled) return;
-        setSession(res.data.session);
+
+        const loaded = res.data.session;
+        const chainId = loaded.chainId ?? null;
+
+        setSession(loaded);
+        setClockOffset(offsetFrom(loaded.serverTime));
+        // the next problem of the same chain keeps the conversation, a new chain starts empty
+        setChat((prev) => (prev.chainId === chainId ? prev : { chainId, messages: [] }));
         setStatus("ready");
       })
       .catch((err) => {
@@ -56,7 +68,10 @@ const SessionPage = () => {
   }, [code, reloadKey]);
 
   const isOpen = session?.status === "waiting" || session?.status === "active";
-  const shouldJoin = Boolean(session?.isParticipant && isOpen);
+  // a finished private room keeps the call and chat alive so the pair can pick another problem
+  const canContinue =
+    session?.status === "completed" && session.visibility === "private" && !session.nextRoomCode;
+  const shouldJoin = Boolean(session?.isParticipant && (isOpen || canContinue));
 
   // being on the page means being in the room, leaving the page starts the reconnect grace period
   useEffect(() => {
@@ -70,7 +85,9 @@ const SessionPage = () => {
     if (!socket) return undefined;
 
     const onPresence = (payload) => {
-      if (payload.roomCode === code) setPresence(payload);
+      if (payload.roomCode !== code) return;
+      setPresence(payload);
+      setClockOffset(offsetFrom(payload.serverTime));
     };
 
     const onUpdated = (payload) => {
@@ -79,14 +96,23 @@ const SessionPage = () => {
 
     const onNext = ({ roomCode }) => navigate(`/session/${roomCode}`);
 
+    const onChat = (incoming) =>
+      setChat((prev) =>
+        prev.messages.some((m) => m.id === incoming.id)
+          ? prev
+          : { ...prev, messages: [...prev.messages, incoming].slice(-200) },
+      );
+
     socket.on("presence:update", onPresence);
     socket.on("session:updated", onUpdated);
     socket.on("session:next", onNext);
+    socket.on("chat:message", onChat);
 
     return () => {
       socket.off("presence:update", onPresence);
       socket.off("session:updated", onUpdated);
       socket.off("session:next", onNext);
+      socket.off("chat:message", onChat);
     };
   }, [socket, code, navigate]);
 
@@ -129,7 +155,7 @@ const SessionPage = () => {
     );
   }
 
-  if (takenOver?.roomCode === code && session.isParticipant && isOpen) {
+  if (takenOver?.roomCode === code && shouldJoin) {
     return (
       <SessionShell>
         <TakenOver onUseHere={() => joinRoom(code)} />
@@ -153,11 +179,15 @@ const SessionPage = () => {
     );
   }
 
-  if (session.status === "active") {
+  if (session.status === "active" || canContinue) {
     return (
-      <SessionShell>
-        <Workspace session={session} presence={presence} onEnded={reload} />
-      </SessionShell>
+      <Workspace
+        session={session}
+        presence={presence}
+        chat={chat}
+        clockOffset={clockOffset}
+        onEnded={reload}
+      />
     );
   }
 

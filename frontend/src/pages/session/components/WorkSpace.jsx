@@ -1,54 +1,88 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { endSession } from "../../../api/sessions.api.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
-import { SessionCard } from "./SessionShell.jsx";
+import SessionHeader from "./SessionHeader.jsx";
+import ReconnectBanner from "./ReconnectBanner.jsx";
+import SolveArea from "./SolveArea.jsx";
+import CompletedPanel from "./CompletedPanel.jsx";
+import ParticipantsPanel from "./ParticipantsPanel.jsx";
+import ChatPanel from "./ChatPanel.jsx";
 
-const Workspace = ({ session, presence, onEnded }) => {
+const Workspace = ({ session, presence, chat, clockOffset, onEnded }) => {
   const { user } = useAuth();
-  const [ending, setEnding] = useState(false);
-  const [error, setError] = useState("");
+  const completed = session.status === "completed";
 
-  const people = presence?.participants ?? session.participants;
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState("");
+
+  // the REST data says who is in the room, live presence says who is connected right now
+  const people = useMemo(
+    () =>
+      session.participants.map((p) => {
+        const live = presence?.participants.find((x) => x.username === p.username);
+
+        return {
+          ...p,
+          connected: live ? live.connected : p.connected,
+          disconnectedAt: live?.disconnectedAt ?? null,
+        };
+      }),
+    [session.participants, presence],
+  );
+
   const partner = people.find((p) => p.username !== user.username);
 
   const handleEnd = async () => {
     setEnding(true);
-    setError("");
+    setEndError("");
 
     try {
       await endSession(session.roomCode);
       onEnded();
     } catch (err) {
-      setError(err.response?.data?.message || "Could not end the session.");
+      setEndError(err.response?.data?.message || "Could not end the session.");
+    } finally {
       setEnding(false);
     }
   };
 
   return (
-    <SessionCard>
-      <h1 className="text-2xl font-semibold tracking-tight text-white">{session.problem.title}</h1>
-      <p className="mt-2 text-sm text-white/45">
-        The shared workspace arrives in the next step. For now this screen shows the room is live.
-      </p>
+    <div className="flex min-h-dvh flex-col gap-3 p-3 lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+      <SessionHeader
+        session={session}
+        people={people}
+        clockOffset={clockOffset}
+        onEnd={handleEnd}
+        ending={ending}
+      />
 
-      <p className="mt-5 flex items-center gap-2 text-sm text-white/65">
-        <span
-          className={`size-2 rounded-full ${partner?.connected ? "bg-emerald-400" : "bg-red-400"}`}
-        />
-        {partner?.username ?? "Partner"} is {partner?.connected ? "connected" : "disconnected"}
-      </p>
+      <ReconnectBanner
+        session={session}
+        partner={partner}
+        graceSeconds={presence?.graceSeconds ?? 60}
+        clockOffset={clockOffset}
+      />
 
-      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+      {endError && (
+        <p className="shrink-0 rounded-xl border border-red-500/15 bg-red-500/7 px-4 py-2.5 text-sm text-red-400">
+          {endError}
+        </p>
+      )}
 
-      <button
-        type="button"
-        onClick={handleEnd}
-        disabled={ending}
-        className="mt-5 w-full rounded-xl border border-red-400/20 bg-red-400/5 py-2.5 text-sm font-medium text-red-400 transition-colors duration-200 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {ending ? "Ending..." : "End session"}
-      </button>
-    </SessionCard>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+        {completed ? (
+          <CompletedPanel session={session} partner={partner} />
+        ) : (
+          // a new problem in the same chain starts from a clean editor state
+          <SolveArea key={session.roomCode} session={session} />
+        )}
+
+        <aside className="flex h-[520px] shrink-0 flex-col gap-3 lg:h-auto lg:min-h-0 lg:w-72 xl:w-80">
+          <ParticipantsPanel people={people} me={user.username} />
+          <ChatPanel messages={chat.messages} me={user.username} />
+        </aside>
+      </div>
+    </div>
   );
 };
 

@@ -33,6 +33,7 @@ const presencePayload = (session) => ({
     connected: p.connected,
     disconnectedAt: p.connected ? null : (p.disconnectedAt ?? null),
   })),
+  serverTime: new Date().toISOString(),
 });
 
 // code updates come in quickly while typing, so this counts in memory instead of asking Redis each time

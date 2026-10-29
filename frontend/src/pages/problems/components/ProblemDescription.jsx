@@ -1,11 +1,12 @@
-
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
   Lightbulb,
   CircleCheck,
   Tags,
+  ArrowLeft,
 } from "lucide-react";
 import DifficultyBadge from "../../../components/DifficultyBadge.jsx";
 import CopyButton from "../../../components/CopyButton.jsx";
@@ -62,9 +63,7 @@ const Hint = ({ index, text }) => {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <p className="px-4 pb-3 text-sm leading-6 text-white/55">
-              {text}
-            </p>
+            <p className="px-4 pb-3 text-sm leading-6 text-white/55">{text}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -115,9 +114,7 @@ const Topics = ({ topics = [] }) => {
                   </span>
                 ))
               ) : (
-                <p className="text-xs text-white/40">
-                  No topics available.
-                </p>
+                <p className="text-xs text-white/40">No topics available.</p>
               )}
             </div>
           </motion.div>
@@ -131,13 +128,17 @@ const ProblemDescription = ({
   problem,
   solved,
   hideSummary = false,
+  showBack = true,
 }) => {
-  const constraints = (problem.constraints || "")
-    .split("\n")
-    .filter(Boolean);
+  const constraints = (problem.constraints || "").split("\n").filter(Boolean);
 
   return (
     <div className="p-5 sm:p-6">
+      {showBack && (
+        <Link to="/problems" className="mb-4 inline-flex items-center gap-1.5 text-sm text-white/45 transition-colors hover:text-white">
+          <ArrowLeft className="size-3.5" /> All problems
+        </Link>
+      )}
       {!hideSummary && (
         <>
           <h1 className="text-2xl font-semibold tracking-tight text-white">

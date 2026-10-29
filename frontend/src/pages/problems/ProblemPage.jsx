@@ -16,6 +16,8 @@ import CodeEditor from "./components/CodeEditor.jsx";
 import TestPanel from "./components/TestPanel.jsx";
 import PartnerPractice from "./components/PartnerPractice.jsx";
 
+
+
 const LANGUAGE_KEY = "codenexa:language";
 
 const LEFT_TABS = [

@@ -1,3 +1,7 @@
+import { readStorage } from "./storage.js";
+
+
+
 export const LANGUAGES = [
   { id: "python", label: "Python", monaco: "python" },
   { id: "typescript", label: "TypeScript", monaco: "typescript" },
@@ -22,4 +26,11 @@ int main() {
     return 0;
 }
 `,
+};
+
+export const LANGUAGE_KEY = "codenexa:language";
+
+export const getSavedLanguage = () => {
+  const saved = readStorage(LANGUAGE_KEY);
+  return LANGUAGES.some((l) => l.id === saved) ? saved : "python";
 };
