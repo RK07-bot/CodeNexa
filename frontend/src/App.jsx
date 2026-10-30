@@ -12,6 +12,7 @@ import SubmitProblemPage from "./pages/submit/SubmitProblemPage.jsx";
 import ProblemPage from "./pages/problems/ProblemPage.jsx";
 import SessionPage from "./pages/session/SessionPage.jsx";
 import RoomsPage from "./pages/rooms/RoomsPage.jsx";
+import DashboardPage from "./pages/dashboard/DashboardPage.jsx";
 
 function App() {
   return (
@@ -47,6 +48,14 @@ function App() {
           element={
             <ProtectedRoute>
               <RoomsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
             </ProtectedRoute>
           }
         />

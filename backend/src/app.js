@@ -8,6 +8,7 @@ import errorHandler from "./middlewares/error.middleware.js";
 import adminRouter from "./routes/admin.routes.js";
 import problemRouter from "./routes/problem.routes.js";
 import sessionRouter from "./routes/session.routes.js";
+import dashboardRouter from "./routes/dashboard.routes.js";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/problems", problemRouter);
 app.use("/api/sessions",sessionRouter);
+app.use("/api/dashboard", dashboardRouter);
 app.use(errorHandler);
 
 export default app;
