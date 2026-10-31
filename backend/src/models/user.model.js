@@ -18,13 +18,15 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum:["user","admin"],
+      enum: ["user", "admin"],
       default: "user",
     },
   },
   { timestamps: true },
 );
 
-const userModel=mongoose.model("User",userSchema);
+userSchema.index({ role: 1 });
+
+const userModel = mongoose.model("User", userSchema);
 
 export default userModel;

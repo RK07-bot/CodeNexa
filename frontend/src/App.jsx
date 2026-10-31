@@ -13,6 +13,9 @@ import ProblemPage from "./pages/problems/ProblemPage.jsx";
 import SessionPage from "./pages/session/SessionPage.jsx";
 import RoomsPage from "./pages/rooms/RoomsPage.jsx";
 import DashboardPage from "./pages/dashboard/DashboardPage.jsx";
+import AdminRoute from "./components/AdminRoute.jsx";
+import AdminPage from "./pages/admin/AdminPage.jsx";
+import ProblemFormPage from "./pages/admin/ProblemFormPage.jsx";
 
 function App() {
   return (
@@ -57,6 +60,30 @@ function App() {
             <ProtectedRoute>
               <DashboardPage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/problems/new"
+          element={
+            <AdminRoute>
+              <ProblemFormPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/problems/:id/edit"
+          element={
+            <AdminRoute>
+              <ProblemFormPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/*"
+          element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
           }
         />
       </Route>

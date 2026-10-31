@@ -85,3 +85,73 @@ export const judgeSubmission = async (problem, { language, code }) => {
 
   return { verdict: "accepted", passed: tests.length, total: tests.length };
 };
+
+// long outputs are cut so one bad solution can't produce a huge response
+const MAX_SHOWN = 300;
+const clip = (text = "") =>
+  text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN)}...` : text;
+
+// Used by the admin "Validate" button. Unlike judgeSubmission, which stops at the
+// first failure, this runs every example and hidden test and reports each one.
+// The caller makes sure there is at least one test.
+export const runAllTests = async (problem, { language, code }) => {
+  const tests = [
+    ...problem.examples.map((e) => ({
+      kind: "example",
+      input: e.input,
+      expectedOutput: e.output,
+    })),
+    ...problem.testCases.map((t) => ({
+      kind: "hidden",
+      source: t.source,
+      input: t.input,
+      expectedOutput: t.expectedOutput,
+    })),
+  ];
+
+  const check = async (test) => {
+    const result = await run(problem, { language, code }, test.input);
+    const actual = normalize(result.stdout);
+
+    let status = result.status;
+    if (status === "ok") {
+      status = actual === normalize(test.expectedOutput) ? "passed" : "wrong_answer";
+    }
+
+    return {
+      kind: test.kind,
+      source: test.source ?? null,
+      status,
+      input: clip(test.input),
+      expected: clip(test.expectedOutput),
+      actual: clip(actual),
+      stderr: clip(result.stderr),
+    };
+  };
+
+  // the first test runs alone: if the code does not even compile, every other
+  // test would fail the same way, so there is no point spending runs on them
+  const first = await check(tests[0]);
+
+  if (first.status === "compile_error") {
+    return {
+      total: tests.length,
+      passed: 0,
+      ran: 1,
+      stopped: "compile_error",
+      results: [first],
+    };
+  }
+
+  // the executor itself only lets 4 runs go at once, the rest wait in its queue
+  const rest = await Promise.all(tests.slice(1).map(check));
+  const results = [first, ...rest];
+
+  return {
+    total: tests.length,
+    passed: results.filter((r) => r.status === "passed").length,
+    ran: results.length,
+    stopped: null,
+    results,
+  };
+};

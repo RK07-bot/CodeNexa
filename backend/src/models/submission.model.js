@@ -20,6 +20,8 @@ const submissionSchema = new mongoose.Schema(
 
 // the Submissions tab and the solved/attempted status both query by user + problem
 submissionSchema.index({ user: 1, problem: 1, createdAt: -1 });
+submissionSchema.index({ createdAt: -1 });
+submissionSchema.index({ user: 1, createdAt: -1 });
 
 const submissionModel = mongoose.model("Submission", submissionSchema);
 

@@ -74,6 +74,14 @@ const problemSchema = new mongoose.Schema(
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     reviewedAt: { type: Date },
 
+    // set by the admin "Validate" button, publishing needs it to match the current tests
+    validation: {
+      validatedAt: { type: Date },
+      validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      fingerprint: { type: String },
+      tests: { type: Number },
+    },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
