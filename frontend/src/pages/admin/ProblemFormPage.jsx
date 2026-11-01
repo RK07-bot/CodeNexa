@@ -20,8 +20,8 @@ import Pills from "../../components/Pills.jsx";
 import Spinner from "../../components/Spinner.jsx";
 
 // the same limits the server enforces
-const MAX_EXAMPLES = 5;
-const MAX_TESTS = 50;
+const MAX_EXAMPLES = 3;
+const MAX_TESTS = 12;
 const MAX_HINTS = 5;
 const MAX_TOPICS = 8;
 

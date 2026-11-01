@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -12,12 +12,16 @@ import {
   Trash2,
   Plus,
   Pencil,
+  Sparkles,
+  RotateCcw,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   getAdminProblems,
   getAdminTopics,
   setProblemStatus,
   deleteProblem,
+  regenerateProblem,
 } from "../../../api/admin.api.js";
 import useDebounce from "../../../hooks/useDebounce.js";
 import Pills from "../../../components/Pills.jsx";
@@ -25,6 +29,8 @@ import Pagination from "../../../components/Pagination.jsx";
 import DifficultyBadge from "../../../components/DifficultyBadge.jsx";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 import ValidationDialog from "./ValidationDialog.jsx";
+import AiDraftDialog from "./AiDraftDialog.jsx";
+import Spinner from "../../../components/Spinner.jsx";
 
 const STATUS = {
   approved: {
@@ -71,7 +77,20 @@ const formatDate = (value) =>
     day: "numeric",
   });
 
-const nameOf = (problem) => problem.title || "Untitled draft";
+const nameOf = (problem) =>
+  problem.title || (problem.isAi ? "AI draft" : "Untitled draft");
+
+// what the AI is doing right now, shown under the status of a processing problem
+const STAGE_LABELS = {
+  queued: "Waiting its turn",
+  drafting: "Writing the statement",
+  solving: "Writing solutions",
+  testing: "Generating tests",
+  checking: "Running and cross-checking",
+};
+
+// the list refreshes by itself while the AI is working
+const POLL_MS = 4000;
 
 // what each confirmable action says and does
 const ACTIONS = {
@@ -90,6 +109,14 @@ const ACTIONS = {
     confirmLabel: "Unpublish",
     danger: true,
     run: (p) => setProblemStatus(p._id, "draft"),
+  },
+  regenerate: {
+    title: "Generate this problem again?",
+    message: (p) =>
+      `The AI starts over from the same idea and replaces the statement, solution and tests of "${nameOf(p)}". Changes you made by hand are lost.`,
+    confirmLabel: "Generate again",
+    danger: false,
+    run: (p) => regenerateProblem(p._id),
   },
   delete: {
     title: "Delete this problem?",
@@ -147,6 +174,10 @@ const ProblemsTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  // a background refresh keeps the rows on screen instead of showing the skeleton
+  const [refreshKey, setRefreshKey] = useState(0);
+  const quietRefresh = useRef(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   // the problem being validated, and the action waiting for confirmation
   const [validating, setValidating] = useState(null);
@@ -189,8 +220,13 @@ const ProblemsTab = () => {
     let cancelled = false;
 
     const load = async () => {
-      setLoading(true);
-      setError("");
+      const quiet = quietRefresh.current;
+      quietRefresh.current = false;
+
+      if (!quiet) {
+        setLoading(true);
+        setError("");
+      }
 
       try {
         const res = await getAdminProblems({
@@ -207,7 +243,8 @@ const ProblemsTab = () => {
         setPagination(res.data.pagination);
       } catch (err) {
         if (cancelled) return;
-        setError(err.response?.data?.message || "Could not load problems.");
+        // a failed background refresh just keeps what is already shown
+        if (!quiet) setError(err.response?.data?.message || "Could not load problems.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -219,7 +256,21 @@ const ProblemsTab = () => {
     return () => {
       cancelled = true;
     };
-  }, [search, status, difficulty, topic, page, limit, reloadKey]);
+  }, [search, status, difficulty, topic, page, limit, reloadKey, refreshKey]);
+
+  // while any problem is being drafted, look again every few seconds
+  const aiWorking = (statusCounts.processing ?? 0) > 0;
+
+  useEffect(() => {
+    if (!aiWorking) return undefined;
+
+    const id = setTimeout(() => {
+      quietRefresh.current = true;
+      setRefreshKey((k) => k + 1);
+    }, POLL_MS);
+
+    return () => clearTimeout(id);
+  }, [aiWorking, refreshKey, problems]);
 
   // clear the message from the history entry, so a refresh does not show it again
   useEffect(() => {
@@ -358,12 +409,22 @@ const ProblemsTab = () => {
           <span className="text-sm text-white/45">problems</span>
         </p>
 
-        <Link
-          to="/admin/problems/new"
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-linear-to-r from-primary-start to-primary-end px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary-start/15 transition-all duration-200 hover:-translate-y-0.5"
-        >
-          <Plus className="size-4" /> Add problem
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAiOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-primary-start/40 bg-primary-start/10 px-4 py-2 text-sm font-semibold text-primary-start transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-start/15"
+          >
+            <Sparkles className="size-4" /> Draft with AI
+          </button>
+
+          <Link
+            to="/admin/problems/new"
+            className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-primary-start to-primary-end px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary-start/15 transition-all duration-200 hover:-translate-y-0.5"
+          >
+            <Plus className="size-4" /> Add problem
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-white/8 bg-card backdrop-blur-xl">
@@ -426,8 +487,13 @@ const ProblemsTab = () => {
             const canPublish = ["draft", "pending_review", "rejected"].includes(
               problem.status,
             );
-            const canDelete = canPublish;
+            // a stuck draft has to be removable too
+            const canDelete = canPublish || problem.status === "processing";
             const canValidate = problem.status !== "processing";
+            const inReview = problem.status === "pending_review";
+            // an AI problem can be generated again until it is published
+            const canRegenerate = problem.isAi && canPublish;
+            const failed = problem.status === "draft" && Boolean(problem.aiError);
 
             return (
               <div
@@ -435,12 +501,20 @@ const ProblemsTab = () => {
                 className={`grid grid-cols-1 items-center gap-3 border-b border-white/8 px-5 py-4 transition-colors duration-200 last:border-b-0 hover:bg-white/3 ${PROBLEM_GRID}`}
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white">
-                    {nameOf(problem)}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-medium text-white">
+                      {nameOf(problem)}
+                    </p>
+                    {problem.isAi && (
+                      <span className="shrink-0 rounded-full border border-primary-start/30 bg-primary-start/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-start">
+                        AI
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-0.5 truncate text-xs text-white/35">
-                    {problem.slug || "no slug yet"}
-                    {problem.createdBy ? ` · by ${problem.createdBy}` : ""}
+                    {problem.title || !problem.idea
+                      ? `${problem.slug || "no slug yet"}${problem.createdBy ? ` · by ${problem.createdBy}` : ""}`
+                      : problem.idea}
                   </p>
 
                   {problem.topics?.length > 0 && (
@@ -472,15 +546,38 @@ const ProblemsTab = () => {
 
                 <div className="space-y-1">
                   <StatusBadge status={problem.status} />
-                  <p
-                    className={`text-[11px] ${
-                      problem.validatedAt ? "text-emerald-400/80" : "text-white/35"
-                    }`}
-                  >
-                    {problem.validatedAt
-                      ? `Validated ${formatDate(problem.validatedAt)}`
-                      : "Not validated"}
-                  </p>
+
+                  {problem.status === "processing" ? (
+                    <div className="flex items-center gap-1.5 text-[11px] text-primary-start">
+                      <Spinner />
+                      {STAGE_LABELS[problem.aiStage] ?? "Working"}
+                    </div>
+                  ) : failed ? (
+                    <p
+                      title={problem.aiError}
+                      className="line-clamp-2 text-[11px] text-red-400"
+                    >
+                      AI draft failed: {problem.aiError}
+                    </p>
+                  ) : (
+                    <>
+                      <p
+                        className={`text-[11px] ${
+                          problem.validatedAt ? "text-emerald-400/80" : "text-white/35"
+                        }`}
+                      >
+                        {problem.validatedAt
+                          ? `Validated ${formatDate(problem.validatedAt)}`
+                          : "Not validated"}
+                      </p>
+                      {inReview && problem.aiWarnings > 0 && (
+                        <p className="text-[11px] text-amber-400">
+                          {problem.aiWarnings}{" "}
+                          {problem.aiWarnings === 1 ? "warning" : "warnings"} from the AI checks
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <span className="text-sm text-white/55">
@@ -515,7 +612,28 @@ const ProblemsTab = () => {
                     </Link>
                   )}
 
-                  {canPublish && (
+                  {inReview && (
+                    <Link
+                      to={`/admin/problems/${problem._id}/review`}
+                      className={`${actionBase} border-primary-start/40 bg-primary-start/10 text-primary-start hover:bg-primary-start/15`}
+                    >
+                      <ClipboardCheck className="size-3.5" />
+                      Review
+                    </Link>
+                  )}
+
+                  {canRegenerate && (
+                    <button
+                      type="button"
+                      onClick={() => openAction("regenerate", problem)}
+                      className={failed ? `${actionBase} border-primary-start/40 bg-primary-start/10 text-primary-start hover:bg-primary-start/15` : actionNeutral}
+                    >
+                      <RotateCcw className="size-3.5" />
+                      {failed ? "Try again" : "Regenerate"}
+                    </button>
+                  )}
+
+                  {canPublish && !inReview && (
                     <button
                       type="button"
                       disabled={!problem.validatedAt}
@@ -582,6 +700,16 @@ const ProblemsTab = () => {
           onClose={closeValidation}
         />
       )}
+
+      <AiDraftDialog
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        onCreated={(message) => {
+          setAiOpen(false);
+          setNotice(message);
+          setReloadKey((k) => k + 1);
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(pending)}

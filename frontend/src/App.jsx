@@ -16,6 +16,7 @@ import DashboardPage from "./pages/dashboard/DashboardPage.jsx";
 import AdminRoute from "./components/AdminRoute.jsx";
 import AdminPage from "./pages/admin/AdminPage.jsx";
 import ProblemFormPage from "./pages/admin/ProblemFormPage.jsx";
+import ProblemReviewPage from "./pages/admin/ProblemReviewPage.jsx";
 
 function App() {
   return (
@@ -75,6 +76,14 @@ function App() {
           element={
             <AdminRoute>
               <ProblemFormPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/problems/:id/review"
+          element={
+            <AdminRoute>
+              <ProblemReviewPage />
             </AdminRoute>
           }
         />

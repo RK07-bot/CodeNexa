@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
 
-// a draft can be saved half-filled, so these only become required once it is submitted
+// a draft can be saved half-filled, and a problem the AI is still writing is empty
+// at first, so these only become required once it is submitted
 const requiredUnlessDraft = [
   function () {
-    return this.status !== "draft";
+    return !["draft", "processing"].includes(this.status);
   },
   "{PATH} is required",
 ];
@@ -80,6 +81,23 @@ const problemSchema = new mongoose.Schema(
       validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       fingerprint: { type: String },
       tests: { type: Number },
+    },
+
+    // only set on problems drafted by the AI
+    ai: {
+      idea: { type: String },
+      // what the admin asked for besides the idea
+      request: {
+        difficulty: { type: String, enum: ["easy", "medium", "hard"] },
+      },
+      // while processing: queued, drafting, solving, testing or checking
+      stage: { type: String },
+      // why the last attempt failed, the admin sees this on the draft
+      error: { type: String },
+      startedAt: { type: Date },
+      finishedAt: { type: Date },
+      // flags and numbers from the automatic checks, shown on the review screen
+      report: { type: mongoose.Schema.Types.Mixed },
     },
 
     createdBy: {

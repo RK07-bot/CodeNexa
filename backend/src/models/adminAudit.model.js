@@ -18,6 +18,7 @@ const adminAuditSchema = new mongoose.Schema(
       enum: [
         "user.role_changed",
         "problem.created",
+        "problem.ai_drafted",
         "problem.updated",
         "problem.published",
         "problem.unpublished",

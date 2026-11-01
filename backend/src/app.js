@@ -13,7 +13,7 @@ import dashboardRouter from "./routes/dashboard.routes.js";
 const app = express();
 
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(
   cors({

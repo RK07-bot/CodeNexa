@@ -6,6 +6,9 @@ import submissionModel from "../models/submission.model.js";
 import sessionModel from "../models/session.model.js";
 import { LANGUAGES } from "../config/languages.js";
 import { ExecutionError } from "../services/executor.service.js";
+import { isAiConfigured } from "../services/gemini.service.js";
+import { failDraft } from "../services/aiDraft.service.js";
+import { enqueueAiDraft } from "../jobs/queues/problem.queue.js";
 import { runAllTests } from "../services/judge.service.js";
 import { listAdminProblemsQuerySchema } from "../validators/admin.validator.js";
 import { getProblemFingerprint } from "../utils/problemFingerprint.js";
@@ -15,6 +18,9 @@ import logAdminAction from "../utils/logAdminAction.js";
 
 // validation runs inside the request, so very large test sets are refused
 const MAX_VALIDATION_TESTS = 60;
+
+// drafting shares the code runner and costs AI calls, so only a few at once
+const MAX_AI_IN_PROGRESS = 3;
 
 const STATUSES = ["draft", "processing", "pending_review", "approved", "rejected"];
 
@@ -76,6 +82,20 @@ export const listAdminProblems = tryCatch(async (req, res) => {
           stats: 1,
           createdAt: 1,
           rejectionReason: 1,
+          // the AI's progress and result, for the rows of the table
+          aiStage: "$ai.stage",
+          aiError: "$ai.error",
+          idea: { $substrCP: [{ $ifNull: ["$ai.idea", ""] }, 0, 120] },
+          isAi: { $gt: [{ $strLenCP: { $ifNull: ["$ai.idea", ""] } }, 0] },
+          aiWarnings: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$ai.report.flags", []] },
+                as: "flag",
+                cond: { $ne: ["$$flag.level", "info"] },
+              },
+            },
+          },
           validatedAt: "$validation.validatedAt",
           testCount: { $size: { $ifNull: ["$testCases", []] } },
           hasSolution: {
@@ -501,12 +521,210 @@ export const deleteProblem = tryCatch(async (req, res) => {
     action: "problem.deleted",
     targetType: "problem",
     targetId: problem._id,
-    targetLabel: problem.title,
+    targetLabel: problem.title || "AI draft",
     details: { slug: problem.slug, status: problem.status },
   });
 
   return res.status(200).json({
     success: true,
-    message: `"${problem.title}" was deleted`,
+    message: `"${problem.title || "The AI draft"}" was deleted`,
+  });
+});
+
+// ---- AI drafting ----
+
+const aiNotSet = (res) =>
+  res.status(503).json({
+    success: false,
+    message:
+      "AI drafting is not set up. Add GEMINI_API_KEY to the backend .env and restart the server",
+  });
+
+// too many at once, the admin waits for one to finish
+const aiBusy = async (res) => {
+  const running = await problemModel.countDocuments({ status: "processing" });
+
+  if (running >= MAX_AI_IN_PROGRESS) {
+    res.status(429).json({
+      success: false,
+      message: `The AI is already drafting ${running} problems. Wait for one to finish`,
+    });
+    return true;
+  }
+
+  return false;
+};
+
+// the admin types a short idea and the AI writes the whole problem in the background
+export const createAiDraft = tryCatch(async (req, res) => {
+  const { idea, difficulty } = req.body;
+
+  if (!isAiConfigured()) return aiNotSet(res);
+  if (await aiBusy(res)) return;
+
+  // an empty problem the worker fills in, a processing problem has no required fields yet
+  const problem = await problemModel.create({
+    status: "processing",
+    createdBy: req.user._id,
+    ai: {
+      idea,
+      request: { difficulty },
+      stage: "queued",
+      startedAt: new Date(),
+    },
+  });
+
+  try {
+    await enqueueAiDraft(problem._id);
+  } catch (error) {
+    // without the job nothing would ever finish this problem
+    console.error("Could not queue the AI draft:", error);
+    await problemModel.deleteOne({ _id: problem._id });
+
+    return res.status(503).json({
+      success: false,
+      message: "Could not start the AI draft. Is Redis running?",
+    });
+  }
+
+  await logAdminAction(req, {
+    action: "problem.ai_drafted",
+    targetType: "problem",
+    targetId: problem._id,
+    targetLabel: idea.slice(0, 80),
+    details: { idea: idea.slice(0, 300) },
+  });
+
+  return res.status(202).json({
+    success: true,
+    message: "The AI is drafting your problem. It shows up for review when it is done",
+    problem: { _id: problem._id },
+  });
+});
+
+// starts again from the same idea, after a failure or when the result was not good
+export const regenerateProblem = tryCatch(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return sendInvalidId(res);
+
+  if (!isAiConfigured()) return aiNotSet(res);
+
+  const current = await problemModel.findById(id).select("status ai.idea title");
+  if (!current) return sendNotFound(res);
+
+  if (!current.ai?.idea) {
+    return res.status(400).json({
+      success: false,
+      message: "This problem was not drafted by the AI",
+    });
+  }
+
+  if (current.status === "processing") {
+    return res.status(409).json({
+      success: false,
+      message: "The AI is already working on this problem",
+    });
+  }
+
+  if (current.status === "approved") {
+    return res.status(409).json({
+      success: false,
+      message: "Unpublish this problem before generating it again",
+    });
+  }
+
+  if (await aiBusy(res)) return;
+
+  // the old status in the filter means two quick clicks start one job, not two
+  const problem = await problemModel.findOneAndUpdate(
+    { _id: id, status: { $in: ["draft", "pending_review", "rejected"] } },
+    {
+      $set: { status: "processing", "ai.stage": "queued", "ai.startedAt": new Date() },
+      $unset: {
+        "ai.error": "",
+        "ai.report": "",
+        "ai.finishedAt": "",
+        validation: "",
+        rejectionReason: "",
+      },
+    },
+    { new: true },
+  );
+
+  if (!problem) {
+    return res.status(409).json({
+      success: false,
+      message: "This problem changed a moment ago. Refresh and try again",
+    });
+  }
+
+  try {
+    await enqueueAiDraft(problem._id);
+  } catch (error) {
+    console.error("Could not queue the AI draft:", error);
+    await failDraft(problem._id, "Could not start the AI draft. Is Redis running?");
+
+    return res.status(503).json({
+      success: false,
+      message: "Could not start the AI draft. Is Redis running?",
+    });
+  }
+
+  await logAdminAction(req, {
+    action: "problem.ai_drafted",
+    targetType: "problem",
+    targetId: problem._id,
+    targetLabel: current.title || current.ai.idea.slice(0, 80),
+    details: { regenerated: true },
+  });
+
+  return res.status(202).json({
+    success: true,
+    message: "The AI is drafting this problem again",
+  });
+});
+
+// the admin declines a problem that is waiting for review, the reason is kept on it
+export const rejectProblem = tryCatch(async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!mongoose.isValidObjectId(id)) return sendInvalidId(res);
+
+  // the old status in the filter means a problem approved a moment ago is not rejected
+  const problem = await problemModel
+    .findOneAndUpdate(
+      { _id: id, status: "pending_review" },
+      {
+        status: "rejected",
+        rejectionReason: reason,
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+      },
+      { new: true },
+    )
+    .select("title");
+
+  if (!problem) {
+    const exists = await problemModel.exists({ _id: id });
+    return exists
+      ? res.status(409).json({
+          success: false,
+          message: "Only a problem waiting for review can be rejected",
+        })
+      : sendNotFound(res);
+  }
+
+  await logAdminAction(req, {
+    action: "problem.rejected",
+    targetType: "problem",
+    targetId: problem._id,
+    targetLabel: problem.title,
+    details: { reason },
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: `"${problem.title}" was rejected`,
   });
 });

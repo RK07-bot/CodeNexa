@@ -30,9 +30,8 @@ export const updateProblemStatusSchema = z.object({
 
 // ---- the problem form ----
 
-// validation runs inside one request and allows 60 tests, so the form is capped below that
-export const MAX_EXAMPLES = 5;
-export const MAX_TESTS = 50;
+export const MAX_EXAMPLES = 3;
+export const MAX_TESTS = 12;
 const MAX_HINTS = 5;
 const MAX_TOPICS = 8;
 
@@ -55,8 +54,9 @@ const example = z
 
 const testCase = z
   .object({
-    input: text(10000),
-    expectedOutput: text(10000),
+    // generated large tests can be long
+    input: text(30000),
+    expectedOutput: text(30000),
     source: z.enum(["author", "ai"]).default("author"),
   })
   .refine((t) => t.input.length > 0 && t.expectedOutput.length > 0, {
@@ -115,6 +115,24 @@ export const problemBodySchema = z.object({
     .default([]),
   // null removes the solution
   referenceSolution: referenceSolution.nullable().default(null),
+});
+
+// the short idea the AI writes a whole problem from
+export const aiDraftSchema = z.object({
+  idea: z
+    .string()
+    .trim()
+    .min(20, "Describe the idea in at least 20 characters")
+    .max(2000, "The idea can be at most 2000 characters"),
+  difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+});
+
+export const rejectProblemSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Say why the problem is rejected")
+    .max(500, "The reason can be at most 500 characters"),
 });
 
 export const listActivityQuerySchema = z.object({

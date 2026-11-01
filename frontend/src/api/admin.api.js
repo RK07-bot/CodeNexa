@@ -45,3 +45,13 @@ export const updateProblem = (problemId, body) =>
 
 export const getActivity = (filters) =>
   api.get("/admin/activity", { params: clean(filters) });
+
+
+// the AI writes a whole problem from a short idea, in the background
+export const createAiDraft = (body) => api.post("/admin/problems/ai-draft", body);
+
+export const regenerateProblem = (problemId) =>
+  api.post(`/admin/problems/${problemId}/regenerate`);
+
+export const rejectProblem = (problemId, reason) =>
+  api.post(`/admin/problems/${problemId}/reject`, { reason });

@@ -1,9 +1,9 @@
 import { executeCode } from "./executor.service.js"
 
-const BATCH_SIZE = 4;
+const BATCH_SIZE = 2;
 
 // trailing spaces and blank lines at the end shouldn't decide a verdict
-const normalize = (text = "") =>
+export const normalize = (text = "") =>
   text
     .split("\n")
     .map((line) => line.trimEnd())

@@ -1,4 +1,3 @@
-
 import http from "http";
 
 import config from "./src/config/env.js";
@@ -8,6 +7,7 @@ import { connectRedis } from "./src/config/redis.js";
 
 import "./src/jobs/workers/email.worker.js";
 import "./src/jobs/workers/session.worker.js";
+import "./src/jobs/workers/problem.worker.js";
 
 import { initSockets } from "./src/sockets/index.js";
 import { reconcilePresence } from "./src/services/presence.service.js";

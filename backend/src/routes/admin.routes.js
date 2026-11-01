@@ -6,6 +6,8 @@ import {
   updateUserRoleSchema,
   updateProblemStatusSchema,
   problemBodySchema,
+  aiDraftSchema,
+  rejectProblemSchema,
 } from "../validators/admin.validator.js";
 import { listUsers, updateUserRole } from "../controllers/admin.controller.js";
 import { getOverview } from "../controllers/admin.stats.controller.js";
@@ -19,6 +21,9 @@ import {
   validateProblem,
   updateProblemStatus,
   deleteProblem,
+  createAiDraft,
+  regenerateProblem,
+  rejectProblem,
 } from "../controllers/admin.problem.controller.js";
 
 const adminRouter = express.Router();
@@ -40,9 +45,16 @@ adminRouter.get("/problems", listAdminProblems);
 // "/problems/topics" must stay above "/problems/:id"
 adminRouter.get("/problems/topics", listAdminTopics);
 adminRouter.post("/problems", validate(problemBodySchema), createProblem);
+adminRouter.post("/problems/ai-draft", validate(aiDraftSchema), createAiDraft);
 adminRouter.get("/problems/:id", getAdminProblem);
 adminRouter.put("/problems/:id", validate(problemBodySchema), updateProblem);
 adminRouter.post("/problems/:id/validate", validateProblem);
+adminRouter.post("/problems/:id/regenerate", regenerateProblem);
+adminRouter.post(
+  "/problems/:id/reject",
+  validate(rejectProblemSchema),
+  rejectProblem,
+);
 adminRouter.patch(
   "/problems/:id/status",
   validate(updateProblemStatusSchema),

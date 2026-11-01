@@ -211,10 +211,10 @@ const OverviewTab = () => {
                 waiting for review
               </p>
               <Link
-                to="/admin/problems"
+                to="/admin/problems?status=pending_review"
                 className="text-sm font-medium text-amber-400 hover:underline"
               >
-                Open problems
+                Review them
               </Link>
             </div>
           )}

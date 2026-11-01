@@ -20,6 +20,11 @@ const ACTIONS = {
   },
   "problem.created": { label: "Created a problem", tone: "text-primary-start" },
   "problem.updated": { label: "Edited a problem", tone: "text-primary-start" },
+  "problem.ai_drafted": {
+    label: "Started an AI draft",
+    tone: "text-primary-start",
+    detail: (d) => (d?.regenerated ? "generated again" : d?.idea ?? ""),
+  },
   "problem.published": { label: "Published a problem", tone: "text-emerald-400" },
   "problem.unpublished": { label: "Unpublished a problem", tone: "text-amber-400" },
   "problem.rejected": {

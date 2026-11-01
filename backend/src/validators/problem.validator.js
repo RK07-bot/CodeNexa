@@ -13,7 +13,7 @@ export const listProblemsQuerySchema = z.object({
 export const runCodeSchema = z.object({
   language: z.enum(LANGUAGE_IDS),
   code: z.string().min(1, "Write some code first").max(50000, "Code is too long"),
-  inputs: z.array(z.string().max(10000)).min(1).max(5).optional(),
+  inputs: z.array(z.string().max(10000)).min(1).max(3).optional(),
 });
 
 export const submitCodeSchema = runCodeSchema.omit({ inputs: true }).extend({

@@ -4,7 +4,7 @@ import { LANGUAGES } from "../config/languages.js";
 export class ExecutionError extends Error {}
 
 const BASE_URL = "https://api.onlinecompiler.io";
-const MAX_CONCURRENT = 4; // the provider's limit for the whole API key
+const MAX_CONCURRENT = 2; // the provider's limit for the whole API key
 const MAX_ATTEMPTS = 5;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,6 +30,24 @@ const release = () => {
   else active--;
 };
 
+// free plan allows 30 runs a minute, stay a little under it
+const MAX_PER_MINUTE = 28;
+const startTimes = [];
+
+const waitForRateSlot = async () => {
+  while (true) {
+    const now = Date.now();
+    while (startTimes.length && now - startTimes[0] >= 60000)
+      startTimes.shift();
+
+    if (startTimes.length < MAX_PER_MINUTE) {
+      startTimes.push(now);
+      return;
+    }
+    await sleep(60000 - (now - startTimes[0]) + 50);
+  }
+};
+
 const callApi = async (body) => {
   if (!config.ONLINECOMPILER_API_KEY) {
     console.error("ONLINECOMPILER_API_KEY is not set in .env");
@@ -37,6 +55,7 @@ const callApi = async (body) => {
   }
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    await waitForRateSlot();
     let response;
     try {
       response = await fetch(`${BASE_URL}/api/run-code-sync/`, {
@@ -56,7 +75,7 @@ const callApi = async (body) => {
 
     // at capacity on their side, wait a moment and try again
     if (response.status === 429 && attempt < MAX_ATTEMPTS) {
-      await sleep(500 * attempt);
+      await sleep(1000 * attempt);
       continue;
     }
 
