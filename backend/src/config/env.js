@@ -1,57 +1,72 @@
+
 import "dotenv/config";
 
+// Application configuration validation
 if (!process.env.PORT) {
   throw new Error("Port is not defined");
 }
+
 if (!process.env.MONGO_URI) {
   throw new Error("MONGO_URI is not defined");
 }
+
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not defined");
 }
+
 if (!process.env.FRONTEND_URL) {
   throw new Error("FRONTEND_URL is not defined");
 }
+
 if (!process.env.APP_NAME) {
   throw new Error("APP_NAME is not defined");
 }
-if (!process.env.MAIL_USER) {
-  throw new Error("MAIL_USER IS NOT DEFINED IN ENVIRONMENT VARIABLES");
+
+// Brevo email configuration
+if (!process.env.BREVO_API_KEY) {
+  throw new Error("BREVO_API_KEY is not defined");
 }
-if (!process.env.MAIL_PASS) {
-  throw new Error("MAIL_PASS IS NOT DEFINED IN ENVIRONMENT VARIABLES");
+
+if (!process.env.BREVO_SENDER_EMAIL) {
+  throw new Error("BREVO_SENDER_EMAIL is not defined");
 }
+
+// Authentication configuration
 if (!process.env.ACCESS_JWT_SECRET) {
-  throw new Error("ACCESS_JWT_SECRET IS NOT DEFINED IN ENVIRONMENT VARIABLES");
+  throw new Error("ACCESS_JWT_SECRET is not defined");
 }
+
 if (!process.env.REFRESH_JWT_SECRET) {
-  throw new Error("REFRESH_JWT_SECRET IS NOT DEFINED IN ENVIRONMENT VARIABLES");
+  throw new Error("REFRESH_JWT_SECRET is not defined");
 }
+
 if (!process.env.NODE_ENV) {
-  throw new Error("NODE_ENV IS NOT DEFINED IN ENVIRONMENT VARIABLES");
+  throw new Error("NODE_ENV is not defined");
 }
+
+// External services
 if (!process.env.ONLINECOMPILER_API_KEY) {
-  throw new Error(
-    "ONLINECOMPILER_API_KEY IS NOT DEFINED IN ENVIRONMENT VARIABLES",
-  );
+  throw new Error("ONLINECOMPILER_API_KEY is not defined");
 }
 
+// Session configuration
 if (!process.env.RECONNECT_GRACE_SECONDS) {
-  throw new Error(
-    "RECONNECT_GRACE_SECONDS IS NOT DEFINED IN ENVIRONMENT VARIABLES",
-  );
-}
-if (!process.env.WAITING_ROOM_EXPIRY_MINUTES) {
-  throw new Error(
-    "WAITING_ROOM_EXPIRY_MINUTES IS NOT DEFINED IN ENVIRONMENT VARIABLES",
-  );
+  throw new Error("RECONNECT_GRACE_SECONDS is not defined");
 }
 
+if (!process.env.WAITING_ROOM_EXPIRY_MINUTES) {
+  throw new Error("WAITING_ROOM_EXPIRY_MINUTES is not defined");
+}
+
+// ICE server configuration
 const parseIceServers = () => {
   if (!process.env.ICE_SERVERS) {
     return [
       {
-        urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"],
+        urls: [
+          "stun:stun.l.google.com:19302",
+          "stun:stun.cloudflare.com:3478",
+        ],
       },
     ];
   }
@@ -70,20 +85,26 @@ const parseIceServers = () => {
 };
 
 const config = {
+  // Application
   MONGO_URI: process.env.MONGO_URI,
   PORT: process.env.PORT,
   REDIS_URL: process.env.REDIS_URL,
   FRONTEND_URL: process.env.FRONTEND_URL,
   APP_NAME: process.env.APP_NAME,
 
-  MAIL_USER: process.env.MAIL_USER,
-  MAIL_PASS: process.env.MAIL_PASS,
+  NODE_ENV: process.env.NODE_ENV || "development",
 
+  // Brevo transactional email
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
+  BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
+  BREVO_SENDER_NAME:
+    process.env.BREVO_SENDER_NAME || process.env.APP_NAME,
+
+  // Authentication
   ACCESS_JWT_SECRET: process.env.ACCESS_JWT_SECRET,
   REFRESH_JWT_SECRET: process.env.REFRESH_JWT_SECRET,
 
-  NODE_ENV: process.env.NODE_ENV || "development",
-
+  // Code execution
   ONLINECOMPILER_API_KEY: process.env.ONLINECOMPILER_API_KEY,
   ONLINECOMPILER_DEBUG: process.env.ONLINECOMPILER_DEBUG === "true",
 
@@ -92,7 +113,9 @@ const config = {
   GEMINI_MODEL: process.env.GEMINI_MODEL,
   GEMINI_FALLBACK_MODEL: process.env.GEMINI_FALLBACK_MODEL,
 
-  RECONNECT_GRACE_SECONDS: Number(process.env.RECONNECT_GRACE_SECONDS) || 60,
+  // Session configuration
+  RECONNECT_GRACE_SECONDS:
+    Number(process.env.RECONNECT_GRACE_SECONDS) || 60,
 
   WAITING_ROOM_EXPIRY_MINUTES:
     Number(process.env.WAITING_ROOM_EXPIRY_MINUTES) || 30,
