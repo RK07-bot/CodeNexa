@@ -9,7 +9,7 @@ const navLinks = [
   { label: "Problems", to: "/problems" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Find a room", to: "/rooms" },
-  { label: "Submit problem", to: "/submit" },
+  { label: "Contribute", to: "/submit" },
   { label: "Admin", to: "/admin" },
 ];
 
