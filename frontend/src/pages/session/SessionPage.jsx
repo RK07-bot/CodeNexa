@@ -8,7 +8,7 @@ import useCall from "../../hooks/useCall.js";
 import SessionShell, { SessionCard } from "./components/SessionShell.jsx";
 import JoinPreview from "./components/JoinPreview.jsx";
 import WaitingRoom from "./components/WaitingRoom.jsx";
-import Workspace from "./components/Workspace.jsx";
+import Workspace from "./components/WorkSpace.jsx";
 import EndedView from "./components/EndedView.jsx";
 import TakenOver from "./components/TakenOver.jsx";
 

@@ -1,26 +1,25 @@
+
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { loginUser } from "../../api/auth.api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { Link } from "react-router-dom";
-import {useLocation} from "react-router-dom";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [conflict, setConflict] = useState(null); // holds { device, loggedInAt } when a conflict happens
+  const [conflict, setConflict] = useState(null);
 
   const { setUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // back to the page they were trying to open, or the problem list by default
-// (switch the default to /dashboard once that page exists)
-const redirectTo = location.state?.from
-  ? `${location.state.from.pathname}${location.state.from.search}`
-  : "/problems";
+  const redirectTo = location.state?.from
+    ? `${location.state.from.pathname}${location.state.from.search}`
+    : "/problems";
 
   const attemptLogin = async (force = false) => {
     setLoading(true);
@@ -33,7 +32,6 @@ const redirectTo = location.state?.from
     } catch (err) {
       const data = err.response?.data;
 
-      // a 409 isn't a real failure here — it's asking the user to confirm a takeover
       if (data?.sessionConflict) {
         setConflict(data.existingSession);
       } else {
@@ -41,7 +39,7 @@ const redirectTo = location.state?.from
           data?.errors?.email?.[0] ||
             data?.errors?.password?.[0] ||
             data?.message ||
-            "Something went wrong. Please try again.",
+            "Something went wrong. Please try again."
         );
       }
     } finally {
@@ -55,35 +53,53 @@ const redirectTo = location.state?.from
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 text-white">
+    <div className="relative flex h-dvh flex-col items-center overflow-hidden bg-background px-4 text-white">
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary-start/10 blur-3xl" />
 
       <div className="pointer-events-none absolute -bottom-40 -left-20 h-72 w-72 rounded-full bg-primary-end/10 blur-3xl" />
 
-      <div className="relative w-full max-w-md">
-        {/* Brand */}
-        <div className="mb-8 text-center">
+      {/* Brand */}
+      <div className="relative z-10 w-full max-w-md shrink-0 pt-7 text-center">
+        <Link
+          to="/"
+          aria-label="Go to CodeNexa home"
+          className="inline-block"
+        >
           <p className="text-2xl font-bold tracking-tight">
             Code
             <span className="bg-linear-to-r from-primary-start to-primary-end bg-clip-text text-transparent">
               Nexa
             </span>
           </p>
+        </Link>
 
-          <div className="mt-3 flex items-center justify-center gap-2">
-            <span className="h-px w-8 bg-white/10" />
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <span className="h-px w-8 bg-white/10" />
 
-            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">
-              Technical Interview Practice
-            </span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">
+            Technical Interview Practice
+          </span>
 
-            <span className="h-px w-8 bg-white/10" />
-          </div>
+          <span className="h-px w-8 bg-white/10" />
         </div>
+      </div>
 
+      {/* Back to Home */}
+      <div className="relative z-10 mt-5 w-full max-w-md shrink-0">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-xs font-medium text-white/45 transition-colors hover:text-primary-start"
+        >
+          <span>←</span>
+          Back to home
+        </Link>
+      </div>
+
+      {/* Main Content */}
+      <main className="relative z-10 flex min-h-0 w-full max-w-md flex-1 flex-col items-center justify-center">
         {/* Login Card */}
-        <div className="rounded-2xl border border-white/8 bg-card p-6 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
+        <div className="w-full rounded-2xl border border-white/8 bg-card p-6 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
           {/* Header */}
           <div className="mb-7">
             <div className="mb-3 inline-flex items-center rounded-lg border border-primary-start/20 bg-primary-start/10 px-2.5 py-1">
@@ -147,28 +163,44 @@ const redirectTo = location.state?.from
                 Password
               </label>
 
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="
-                  w-full rounded-xl
-                  border border-white/8
-                  bg-recessed
-                  px-3.5 py-3
-                  text-sm text-white
-                  placeholder:text-white/25
-                  outline-none
-                  transition-all duration-200
-                  hover:border-white/12
-                  focus:border-primary-start/50
-                  focus:bg-editor
-                  focus:ring-2 focus:ring-primary-start/10
-                "
-                required
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="
+                    w-full rounded-xl
+                    border border-white/8
+                    bg-recessed
+                    px-3.5 py-3 pr-11
+                    text-sm text-white
+                    placeholder:text-white/25
+                    outline-none
+                    transition-all duration-200
+                    hover:border-white/12
+                    focus:border-primary-start/50
+                    focus:bg-editor
+                    focus:ring-2 focus:ring-primary-start/10
+                  "
+                  required
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-primary-start focus-visible:outline-none focus-visible:text-primary-start"
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex justify-end">
@@ -210,13 +242,24 @@ const redirectTo = location.state?.from
               {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
+
+          {/* Register Navigation */}
+          <p className="mt-6 text-center text-xs text-white/45">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="font-medium text-primary-start transition-colors hover:text-primary-end"
+            >
+              Create account
+            </Link>
+          </p>
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-[11px] text-white/25">
+        <p className="mt-3 shrink-0 text-center text-[11px] text-white/25">
           Secure access to your technical interview workspace
         </p>
-      </div>
+      </main>
 
       {/* Session Conflict Modal */}
       {conflict && (

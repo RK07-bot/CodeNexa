@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import Layout from "./components/Layout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import GuestRoute from "./components/GuestRoute.jsx";
 import AdminRoute from "./components/AdminRoute.jsx";
 
 const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
@@ -34,22 +35,40 @@ function App() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-screen items-center justify-center bg-background">
           Loading page...
         </div>
       }
     >
       <Routes>
-        {/* auth pages have no navbar — they're a separate, focused flow */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        {/* Guest-only authentication pages */}
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <LoginPage />
+            </GuestRoute>
+          }
+        />
+
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <RegisterPage />
+            </GuestRoute>
+          }
+        />
+
+        {/* Password recovery and email verification remain accessible */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify/:token" element={<VerifyEmailPage />} />
 
-        {/* everything else shares the navbar */}
+        {/* Pages sharing the main navbar */}
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
+
           <Route
             path="/problems"
             element={
@@ -58,6 +77,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/submit"
             element={
@@ -66,6 +86,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/rooms"
             element={
@@ -74,6 +95,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/dashboard"
             element={
@@ -82,6 +104,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/admin/problems/new"
             element={
@@ -90,6 +113,7 @@ function App() {
               </AdminRoute>
             }
           />
+
           <Route
             path="/admin/problems/:id/edit"
             element={
@@ -98,6 +122,7 @@ function App() {
               </AdminRoute>
             }
           />
+
           <Route
             path="/admin/problems/:id/review"
             element={
@@ -106,6 +131,7 @@ function App() {
               </AdminRoute>
             }
           />
+
           <Route
             path="/admin/*"
             element={
@@ -115,6 +141,7 @@ function App() {
             }
           />
         </Route>
+
         <Route
           path="/problems/:slug"
           element={

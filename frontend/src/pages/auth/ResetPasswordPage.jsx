@@ -1,18 +1,27 @@
+
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { verifyOtp, changePassword, resendOtp } from "../../api/auth.api.js";
+import { Eye, EyeOff } from "lucide-react";
+import {
+  verifyOtp,
+  changePassword,
+  resendOtp,
+} from "../../api/auth.api.js";
 
 const ResetPasswordPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const email = location.state?.email || "";
 
-  const [step, setStep] = useState("otp"); // "otp" | "password"
+  const [step, setStep] = useState("otp");
   const [otp, setOtp] = useState("");
   const [resetToken, setResetToken] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,7 +61,9 @@ const ResetPasswordPage = () => {
     } catch (err) {
       const errors = err.response?.data?.errors;
       setResendMessage(
-        errors?.email?.[0] || err.response?.data?.message || "Couldn't resend. Try again shortly."
+        errors?.email?.[0] ||
+          err.response?.data?.message ||
+          "Couldn't resend. Try again shortly."
       );
     } finally {
       setResending(false);
@@ -71,7 +82,11 @@ const ResetPasswordPage = () => {
     setError("");
 
     try {
-      await changePassword({ resetToken, newPassword, confirmNewPassword });
+      await changePassword({
+        resetToken,
+        newPassword,
+        confirmNewPassword,
+      });
       setDone(true);
     } catch (err) {
       const errors = err.response?.data?.errors;
@@ -85,158 +100,295 @@ const ResetPasswordPage = () => {
     }
   };
 
-  if (!email) {
-    return (
-      <div className="relative flex h-dvh items-center justify-center bg-background px-4 text-white">
-        <div className="text-center">
-          <p className="text-sm text-white/45">Start by requesting a reset code first.</p>
-          <Link to="/forgot-password" className="mt-3 inline-block text-sm font-medium text-primary-start">
-            Go to forgot password
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative flex h-dvh items-center justify-center overflow-hidden bg-background px-4 py-4 text-white">
+    <div className="relative flex h-dvh flex-col items-center overflow-hidden bg-background px-4 text-white">
+      {/* Ambient background glow */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary-start/10 blur-3xl" />
+
       <div className="pointer-events-none absolute -bottom-40 -left-20 h-72 w-72 rounded-full bg-primary-end/10 blur-3xl" />
 
-      <div className="relative flex w-full max-w-md flex-col items-center">
-        <div className="mb-4 text-center">
+      {/* Brand */}
+      <div className="relative z-10 w-full max-w-md shrink-0 pt-7 text-center">
+        <Link
+          to="/"
+          aria-label="Go to CodeNexa home"
+          className="inline-block"
+        >
           <p className="text-2xl font-bold tracking-tight">
-            Code<span className="bg-linear-to-r from-primary-start to-primary-end bg-clip-text text-transparent">Nexa</span>
+            Code
+            <span className="bg-linear-to-r from-primary-start to-primary-end bg-clip-text text-transparent">
+              Nexa
+            </span>
           </p>
-          <div className="mt-2 flex items-center justify-center gap-2">
-            <span className="h-px w-8 bg-white/10" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">Technical Interview Practice</span>
-            <span className="h-px w-8 bg-white/10" />
-          </div>
+        </Link>
+
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <span className="h-px w-8 bg-white/10" />
+
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">
+            Technical Interview Practice
+          </span>
+
+          <span className="h-px w-8 bg-white/10" />
         </div>
-
-        <div className="w-full rounded-2xl border border-white/8 bg-card p-5 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-6">
-          {done ? (
-            <div className="py-4 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary-start/20 bg-primary-start/10">
-                <span className="text-lg">✓</span>
-              </div>
-              <h2 className="text-lg font-semibold text-white">Password changed</h2>
-              <p className="mt-2 text-sm leading-5 text-white/45">
-                You can now sign in with your new password.
-              </p>
-              <button
-                onClick={() => navigate("/login")}
-                className="mt-5 w-full rounded-xl bg-linear-to-r from-primary-start to-primary-end py-2.5 text-sm font-semibold text-white"
-              >
-                Back to sign in
-              </button>
-            </div>
-          ) : step === "otp" ? (
-            <>
-              <div className="mb-5">
-                <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Enter the code</h1>
-                <p className="mt-1.5 text-sm leading-5 text-white/45">
-                  We sent a 6-digit code to <span className="text-white/75">{email}</span>.
-                </p>
-              </div>
-
-              <form onSubmit={handleVerifyOtp} className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <label htmlFor="otp" className="block text-xs font-medium text-white/65">Verification code</label>
-                  <input
-                    id="otp"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="000000"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    className="w-full rounded-xl border border-white/8 bg-recessed px-3.5 py-2.5 text-center font-mono text-lg tracking-[0.4em] text-white placeholder:text-white/25 outline-none transition-all duration-200 hover:border-white/12 focus:border-primary-start/50 focus:bg-editor focus:ring-2 focus:ring-primary-start/10"
-                    required
-                  />
-                </div>
-
-                {error && (
-                  <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-2.5">
-                    <p className="text-sm leading-5 text-red-400">{error}</p>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-primary-start to-primary-end py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-start/15 transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Verifying..." : "Verify code"}
-                </button>
-              </form>
-
-              {resendMessage && <p className="mt-3 text-center text-xs text-primary-start">{resendMessage}</p>}
-
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={resending}
-                className="mt-3 w-full rounded-xl border border-white/8 bg-recessed py-2.5 text-sm font-medium text-white/75 transition-all duration-200 hover:border-white/12 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {resending ? "Resending..." : "Resend code"}
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="mb-5">
-                <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Set a new password</h1>
-                <p className="mt-1.5 text-sm leading-5 text-white/45">Choose a strong password for your account.</p>
-              </div>
-
-              <form onSubmit={handleChangePassword} className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <label htmlFor="newPassword" className="block text-xs font-medium text-white/65">New password</label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    placeholder="At least 8 characters"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full rounded-xl border border-white/8 bg-recessed px-3.5 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-200 hover:border-white/12 focus:border-primary-start/50 focus:bg-editor focus:ring-2 focus:ring-primary-start/10"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="confirmNewPassword" className="block text-xs font-medium text-white/65">Confirm new password</label>
-                  <input
-                    id="confirmNewPassword"
-                    type="password"
-                    placeholder="Repeat password"
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="w-full rounded-xl border border-white/8 bg-recessed px-3.5 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-200 hover:border-white/12 focus:border-primary-start/50 focus:bg-editor focus:ring-2 focus:ring-primary-start/10"
-                    required
-                  />
-                </div>
-
-                {error && (
-                  <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-2.5">
-                    <p className="text-sm leading-5 text-red-400">{error}</p>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-primary-start to-primary-end py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-start/15 transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Changing password..." : "Change password"}
-                </button>
-              </form>
-            </>
-          )}
-        </div>
-
-        <p className="mt-3 text-center text-[10px] text-white/25">Secure access to your technical interview workspace</p>
       </div>
+
+      {/* Back to Home */}
+      <div className="relative z-10 mt-5 w-full max-w-md shrink-0">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-xs font-medium text-white/45 transition-colors hover:text-primary-start"
+        >
+          <span>←</span>
+          Back to home
+        </Link>
+      </div>
+
+      {/* Main Content */}
+      <main className="relative z-10 flex min-h-0 w-full max-w-md flex-1 flex-col items-center justify-center py-3">
+        {!email ? (
+          /* Missing Email State */
+          <div className="w-full rounded-2xl border border-white/8 bg-card p-6 text-center shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
+            <h1 className="text-xl font-semibold text-white">
+              Reset your password
+            </h1>
+
+            <p className="mt-2 text-sm leading-5 text-white/45">
+              Start by requesting a reset code first.
+            </p>
+
+            <Link
+              to="/forgot-password"
+              className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-linear-to-r from-primary-start to-primary-end py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+            >
+              Go to forgot password
+            </Link>
+          </div>
+        ) : (
+          <div className="w-full rounded-2xl border border-white/8 bg-card p-5 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-6">
+            {done ? (
+              /* Success State */
+              <div className="py-4 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary-start/20 bg-primary-start/10">
+                  <span className="text-lg">✓</span>
+                </div>
+
+                <h2 className="text-lg font-semibold text-white">
+                  Password changed
+                </h2>
+
+                <p className="mt-2 text-sm leading-5 text-white/45">
+                  You can now sign in with your new password.
+                </p>
+
+                <button
+                  onClick={() => navigate("/login")}
+                  className="mt-5 w-full rounded-xl bg-linear-to-r from-primary-start to-primary-end py-2.5 text-sm font-semibold text-white"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            ) : step === "otp" ? (
+              /* OTP Verification */
+              <>
+                <div className="mb-5">
+                  <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                    Enter the code
+                  </h1>
+
+                  <p className="mt-1.5 text-sm leading-5 text-white/45">
+                    We sent a 6-digit code to{" "}
+                    <span className="text-white/75">{email}</span>.
+                  </p>
+                </div>
+
+                <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="otp"
+                      className="block text-xs font-medium text-white/65"
+                    >
+                      Verification code
+                    </label>
+
+                    <input
+                      id="otp"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      className="w-full rounded-xl border border-white/8 bg-recessed px-3.5 py-2.5 text-center font-mono text-lg tracking-[0.4em] text-white placeholder:text-white/25 outline-none transition-all duration-200 hover:border-white/12 focus:border-primary-start/50 focus:bg-editor focus:ring-2 focus:ring-primary-start/10"
+                      required
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-2.5">
+                      <p className="text-sm leading-5 text-red-400">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-primary-start to-primary-end py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-start/15 transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading ? "Verifying..." : "Verify code"}
+                  </button>
+                </form>
+
+                {resendMessage && (
+                  <p className="mt-3 text-center text-xs text-primary-start">
+                    {resendMessage}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="mt-3 w-full rounded-xl border border-white/8 bg-recessed py-2.5 text-sm font-medium text-white/75 transition-all duration-200 hover:border-white/12 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {resending ? "Resending..." : "Resend code"}
+                </button>
+
+                <p className="mt-5 text-center text-xs text-white/45">
+                  Wrong email?{" "}
+                  <Link
+                    to="/forgot-password"
+                    className="font-medium text-primary-start hover:text-primary-end"
+                  >
+                    Change email
+                  </Link>
+                </p>
+              </>
+            ) : (
+              /* New Password */
+              <>
+                <div className="mb-5">
+                  <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                    Set a new password
+                  </h1>
+
+                  <p className="mt-1.5 text-sm leading-5 text-white/45">
+                    Choose a strong password for your account.
+                  </p>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="space-y-3.5">
+                  {/* New Password */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="newPassword"
+                      className="block text-xs font-medium text-white/65"
+                    >
+                      New password
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="At least 8 characters"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full rounded-xl border border-white/8 bg-recessed px-3.5 py-2.5 pr-11 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-200 hover:border-white/12 focus:border-primary-start/50 focus:bg-editor focus:ring-2 focus:ring-primary-start/10"
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowNewPassword((prev) => !prev)
+                        }
+                        aria-label={
+                          showNewPassword
+                            ? "Hide new password"
+                            : "Show new password"
+                        }
+                        aria-pressed={showNewPassword}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-primary-start focus-visible:outline-none focus-visible:text-primary-start"
+                      >
+                        {showNewPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm New Password */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="confirmNewPassword"
+                      className="block text-xs font-medium text-white/65"
+                    >
+                      Confirm new password
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        id="confirmNewPassword"
+                        type={
+                          showConfirmNewPassword ? "text" : "password"
+                        }
+                        placeholder="Repeat password"
+                        value={confirmNewPassword}
+                        onChange={(e) =>
+                          setConfirmNewPassword(e.target.value)
+                        }
+                        className="w-full rounded-xl border border-white/8 bg-recessed px-3.5 py-2.5 pr-11 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-200 hover:border-white/12 focus:border-primary-start/50 focus:bg-editor focus:ring-2 focus:ring-primary-start/10"
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmNewPassword((prev) => !prev)
+                        }
+                        aria-label={
+                          showConfirmNewPassword
+                            ? "Hide confirm password"
+                            : "Show confirm password"
+                        }
+                        aria-pressed={showConfirmNewPassword}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-primary-start focus-visible:outline-none focus-visible:text-primary-start"
+                      >
+                        {showConfirmNewPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-2.5">
+                      <p className="text-sm leading-5 text-red-400">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-primary-start to-primary-end py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-start/15 transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading ? "Changing password..." : "Change password"}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        )}
+      </main>
     </div>
   );
 };

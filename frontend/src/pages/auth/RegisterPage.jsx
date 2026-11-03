@@ -1,11 +1,19 @@
+
 import { useState } from "react";
-import { registerUser, resendVerificationEmail } from "../../api/auth.api.js";
+import { Link } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
+import {
+  registerUser,
+  resendVerificationEmail,
+} from "../../api/auth.api.js";
 
 const RegisterPage = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -34,8 +42,8 @@ const RegisterPage = () => {
         errors?.username?.[0] ||
           errors?.email?.[0] ||
           errors?.password?.[0] ||
-          errors?.message||
-          "Something went wrong. Please try again.",
+          errors?.message ||
+          "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
@@ -52,7 +60,7 @@ const RegisterPage = () => {
     } catch (err) {
       setResendMessage(
         err.response?.data?.errors?.message ||
-          "Couldn't resend. Try again shortly.",
+          "Couldn't resend. Try again shortly."
       );
     } finally {
       setResending(false);
@@ -60,39 +68,57 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="relative flex h-dvh items-center justify-center overflow-hidden bg-background px-4 py-4 text-white">
+    <div className="relative flex h-dvh flex-col items-center overflow-hidden bg-background px-4 text-white">
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary-start/10 blur-3xl" />
 
       <div className="pointer-events-none absolute -bottom-40 -left-20 h-72 w-72 rounded-full bg-primary-end/10 blur-3xl" />
 
-      <div className="relative flex w-full max-w-md flex-col items-center">
-        {/* Brand */}
-        <div className="mb-4 text-center">
+      {/* Brand */}
+      <div className="relative z-10 w-full max-w-md shrink-0 pt-7 text-center">
+        <Link
+          to="/"
+          aria-label="Go to CodeNexa home"
+          className="inline-block"
+        >
           <p className="text-2xl font-bold tracking-tight">
             Code
             <span className="bg-linear-to-r from-primary-start to-primary-end bg-clip-text text-transparent">
               Nexa
             </span>
           </p>
+        </Link>
 
-          <div className="mt-2 flex items-center justify-center gap-2">
-            <span className="h-px w-8 bg-white/10" />
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <span className="h-px w-8 bg-white/10" />
 
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
-              Technical Interview Practice
-            </span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">
+            Technical Interview Practice
+          </span>
 
-            <span className="h-px w-8 bg-white/10" />
-          </div>
+          <span className="h-px w-8 bg-white/10" />
         </div>
+      </div>
 
-        {/* Card */}
-        <div className="w-full rounded-2xl border border-white/8 bg-card p-5 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-6">
+      {/* Back to Home */}
+      <div className="relative z-10 mt-5 w-full max-w-md shrink-0">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-xs font-medium text-white/45 transition-colors hover:text-primary-start"
+        >
+          <span>←</span>
+          Back to home
+        </Link>
+      </div>
+
+      {/* Main Content */}
+      <main className="relative z-10 flex min-h-0 w-full max-w-md flex-1 flex-col items-center justify-center py-3">
+        {/* Register Card */}
+        <div className="w-full rounded-2xl border border-white/8 bg-card p-4 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-5">
           {!submitted ? (
             <>
               {/* Header */}
-              <div className="mb-5">
+              <div className="mb-4">
                 <div className="mb-2 inline-flex items-center rounded-lg border border-primary-start/20 bg-primary-start/10 px-2.5 py-1">
                   <span className="mr-2 h-1.5 w-1.5 rounded-full bg-primary-start shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
 
@@ -111,9 +137,9 @@ const RegisterPage = () => {
               </div>
 
               {/* Registration Form */}
-              <form onSubmit={handleSubmit} className="space-y-3.5">
+              <form onSubmit={handleSubmit} className="space-y-2.5">
                 {/* Username */}
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label
                     htmlFor="username"
                     className="block text-xs font-medium text-white/65"
@@ -131,7 +157,7 @@ const RegisterPage = () => {
                       w-full rounded-xl
                       border border-white/8
                       bg-recessed
-                      px-3.5 py-2.5
+                      px-3.5 py-2
                       text-sm text-white
                       placeholder:text-white/25
                       outline-none
@@ -146,7 +172,7 @@ const RegisterPage = () => {
                 </div>
 
                 {/* Email */}
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label
                     htmlFor="email"
                     className="block text-xs font-medium text-white/65"
@@ -164,7 +190,7 @@ const RegisterPage = () => {
                       w-full rounded-xl
                       border border-white/8
                       bg-recessed
-                      px-3.5 py-2.5
+                      px-3.5 py-2
                       text-sm text-white
                       placeholder:text-white/25
                       outline-none
@@ -179,7 +205,7 @@ const RegisterPage = () => {
                 </div>
 
                 {/* Password */}
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label
                     htmlFor="password"
                     className="block text-xs font-medium text-white/65"
@@ -187,32 +213,52 @@ const RegisterPage = () => {
                     Password
                   </label>
 
-                  <input
-                    id="password"
-                    type="password"
-                    placeholder="At least 8 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="
-                      w-full rounded-xl
-                      border border-white/8
-                      bg-recessed
-                      px-3.5 py-2.5
-                      text-sm text-white
-                      placeholder:text-white/25
-                      outline-none
-                      transition-all duration-200
-                      hover:border-white/12
-                      focus:border-primary-start/50
-                      focus:bg-editor
-                      focus:ring-2 focus:ring-primary-start/10
-                    "
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="At least 8 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="
+                        w-full rounded-xl
+                        border border-white/8
+                        bg-recessed
+                        px-3.5 py-2 pr-11
+                        text-sm text-white
+                        placeholder:text-white/25
+                        outline-none
+                        transition-all duration-200
+                        hover:border-white/12
+                        focus:border-primary-start/50
+                        focus:bg-editor
+                        focus:ring-2 focus:ring-primary-start/10
+                      "
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword((prev) => !prev)
+                      }
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                      aria-pressed={showPassword}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-primary-start focus-visible:outline-none focus-visible:text-primary-start"
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Confirm Password */}
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label
                     htmlFor="confirmPassword"
                     className="block text-xs font-medium text-white/65"
@@ -220,34 +266,58 @@ const RegisterPage = () => {
                     Confirm password
                   </label>
 
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Repeat password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="
-                      w-full rounded-xl
-                      border border-white/8
-                      bg-recessed
-                      px-3.5 py-2.5
-                      text-sm text-white
-                      placeholder:text-white/25
-                      outline-none
-                      transition-all duration-200
-                      hover:border-white/12
-                      focus:border-primary-start/50
-                      focus:bg-editor
-                      focus:ring-2 focus:ring-primary-start/10
-                    "
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Repeat password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="
+                        w-full rounded-xl
+                        border border-white/8
+                        bg-recessed
+                        px-3.5 py-2 pr-11
+                        text-sm text-white
+                        placeholder:text-white/25
+                        outline-none
+                        transition-all duration-200
+                        hover:border-white/12
+                        focus:border-primary-start/50
+                        focus:bg-editor
+                        focus:ring-2 focus:ring-primary-start/10
+                      "
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword((prev) => !prev)
+                      }
+                      aria-label={
+                        showConfirmPassword
+                          ? "Hide confirm password"
+                          : "Show confirm password"
+                      }
+                      aria-pressed={showConfirmPassword}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-primary-start focus-visible:outline-none focus-visible:text-primary-start"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Error */}
                 {error && (
-                  <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-2.5">
-                    <p className="text-sm leading-5 text-red-400">{error}</p>
+                  <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-2">
+                    <p className="text-sm leading-5 text-red-400">
+                      {error}
+                    </p>
                   </div>
                 )}
 
@@ -274,11 +344,21 @@ const RegisterPage = () => {
                   {loading ? "Creating account..." : "Create account"}
                 </button>
               </form>
+
+              {/* Login Navigation */}
+              <p className="mt-4 text-center text-xs text-white/45">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="font-medium text-primary-start transition-colors hover:text-primary-end"
+                >
+                  Sign in
+                </Link>
+              </p>
             </>
           ) : (
             /* Verification state */
             <div className="py-4 text-center">
-              {/* Email Icon */}
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary-start/20 bg-primary-start/10">
                 <span className="text-lg">✉</span>
               </div>
@@ -293,14 +373,12 @@ const RegisterPage = () => {
                 minutes.
               </p>
 
-              {/* Resend Feedback */}
               {resendMessage && (
                 <p className="mt-3 text-xs leading-5 text-primary-start">
                   {resendMessage}
                 </p>
               )}
 
-              {/* Resend Button */}
               <button
                 type="button"
                 onClick={handleResend}
@@ -328,10 +406,10 @@ const RegisterPage = () => {
         </div>
 
         {/* Footer */}
-        <p className="mt-3 text-center text-[10px] text-white/25">
+        <p className="mt-3 shrink-0 text-center text-[10px] text-white/25">
           Secure access to your technical interview workspace
         </p>
-      </div>
+      </main>
     </div>
   );
 };

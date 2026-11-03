@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { forgotPassword } from "../../api/auth.api.js";
@@ -21,7 +22,7 @@ const ForgotPasswordPage = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Something went wrong. Please try again.",
+          "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
@@ -29,39 +30,66 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 text-white">
+    <div className="relative flex h-dvh flex-col items-center overflow-hidden bg-background px-4 text-white">
+      {/* Ambient background glow */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary-start/10 blur-3xl" />
+
       <div className="pointer-events-none absolute -bottom-40 -left-20 h-72 w-72 rounded-full bg-primary-end/10 blur-3xl" />
 
-      <div className="relative w-full max-w-md">
-        <div className="mb-8 text-center">
+      {/* Brand */}
+      <div className="relative z-10 w-full max-w-md shrink-0 pt-7 text-center">
+        <Link
+          to="/"
+          aria-label="Go to CodeNexa home"
+          className="inline-block"
+        >
           <p className="text-2xl font-bold tracking-tight">
             Code
             <span className="bg-linear-to-r from-primary-start to-primary-end bg-clip-text text-transparent">
               Nexa
             </span>
           </p>
-          <div className="mt-3 flex items-center justify-center gap-2">
-            <span className="h-px w-8 bg-white/10" />
-            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">
-              Technical Interview Practice
-            </span>
-            <span className="h-px w-8 bg-white/10" />
-          </div>
-        </div>
+        </Link>
 
-        <div className="rounded-2xl border border-white/8 bg-card p-6 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <span className="h-px w-8 bg-white/10" />
+
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">
+            Technical Interview Practice
+          </span>
+
+          <span className="h-px w-8 bg-white/10" />
+        </div>
+      </div>
+
+      {/* Back to Home */}
+      <div className="relative z-10 mt-5 w-full max-w-md shrink-0">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-xs font-medium text-white/45 transition-colors hover:text-primary-start"
+        >
+          <span>←</span>
+          Back to home
+        </Link>
+      </div>
+
+      {/* Main Content */}
+      <main className="relative z-10 flex min-h-0 w-full max-w-md flex-1 flex-col items-center justify-center py-3">
+        <div className="w-full rounded-2xl border border-white/8 bg-card p-6 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
           {!sent ? (
             <>
+              {/* Header */}
               <div className="mb-7">
                 <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                   Reset your password
                 </h1>
+
                 <p className="mt-2 text-sm leading-6 text-white/45">
                   Enter your email and we'll send you a code to reset it.
                 </p>
               </div>
 
+              {/* Forgot Password Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <label
@@ -70,6 +98,7 @@ const ForgotPasswordPage = () => {
                   >
                     Email address
                   </label>
+
                   <input
                     id="email"
                     type="email"
@@ -83,7 +112,9 @@ const ForgotPasswordPage = () => {
 
                 {error && (
                   <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-3">
-                    <p className="text-sm leading-5 text-red-400">{error}</p>
+                    <p className="text-sm leading-5 text-red-400">
+                      {error}
+                    </p>
                   </div>
                 )}
 
@@ -96,6 +127,7 @@ const ForgotPasswordPage = () => {
                 </button>
               </form>
 
+              {/* Login Navigation */}
               <p className="mt-6 text-center text-xs text-white/45">
                 Remembered it?{" "}
                 <Link
@@ -107,17 +139,22 @@ const ForgotPasswordPage = () => {
               </p>
             </>
           ) : (
+            /* Code Sent State */
             <div className="text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary-start/20 bg-primary-start/10">
                 <span className="text-lg">✉</span>
               </div>
+
               <h2 className="text-lg font-semibold text-white">
                 Check your inbox
               </h2>
+
               <p className="mt-2 text-sm leading-5 text-white/45">
-                If <span className="text-white/75">{email}</span> is registered,
+                If{" "}
+                <span className="text-white/75">{email}</span> is registered,
                 a 6-digit code has been sent. It expires in 5 minutes.
               </p>
+
               <button
                 onClick={() =>
                   navigate("/reset-password", { state: { email } })
@@ -126,10 +163,31 @@ const ForgotPasswordPage = () => {
               >
                 Enter code
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSent(false);
+                  setError("");
+                }}
+                className="mt-4 text-xs font-medium text-primary-start transition-colors hover:text-primary-end"
+              >
+                Use a different email
+              </button>
+
+              <p className="mt-5 text-xs text-white/45">
+                Remembered your password?{" "}
+                <Link
+                  to="/login"
+                  className="font-medium text-primary-start hover:text-primary-end"
+                >
+                  Sign in
+                </Link>
+              </p>
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 };
