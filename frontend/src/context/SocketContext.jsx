@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import api from "../api/axiosInstance.js";
+import { refreshSession } from "../api/axiosInstance.js";
 import { SERVER_URL } from "../lib/config.js";
 import { useAuth } from "./AuthContext.jsx";
 
@@ -49,7 +49,7 @@ export const SocketProvider = ({ children }) => {
       lastRefresh = Date.now();
 
       try {
-        await api.post("/auth/refresh");
+      await refreshSession();
         instance.connect();
       } catch {
         // the login really is over, the auth layer handles that

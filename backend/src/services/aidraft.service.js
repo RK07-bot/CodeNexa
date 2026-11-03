@@ -1,5 +1,5 @@
 import problemModel from "../models/problem.model.js";
-import { PipelineError, runAiDraft } from "./problemPipeline.service.js";
+import { PipelineError, runAiDraft } from "./problempipeline.service.js";
 import { getProblemFingerprint } from "../utils/problemFingerprint.js";
 
 // a draft that is still "processing" after this long lost its job (for example a

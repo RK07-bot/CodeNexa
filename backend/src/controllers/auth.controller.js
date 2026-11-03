@@ -76,7 +76,6 @@ export const registerUser = tryCatch(async (req, res) => {
 
   // Generate a secure random token for email verification
   const verificationToken = crypto.randomBytes(32).toString("hex");
-  console.log("GENERATED TOKEN:", verificationToken);
 
   // Redis key used to temporarily store unverified user data
   const verificationKey = `verify:${verificationToken}`;
@@ -319,8 +318,6 @@ export const loginUser = tryCatch(async (req, res) => {
     },
   });
 });
-
-
 
 export const refreshAccessToken = tryCatch(async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
@@ -651,8 +648,8 @@ export const logoutUser = tryCatch(async (req, res) => {
 
   await revokeRefreshToken(userId);
   await invalidateUserCache(userId);
-  res.clearCookie("refreshToken");
-  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken", refreshTokenCookieOptions);
+  res.clearCookie("accessToken", accessTokenCookieOptions);
 
   return res.status(200).json({
     success: true,

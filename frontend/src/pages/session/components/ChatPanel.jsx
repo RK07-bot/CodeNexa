@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send, X } from "lucide-react";
 import { useSocket } from "../../../context/SocketContext.jsx";
 
 const clock = (iso) =>
   new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-const ChatPanel = ({ messages, me }) => {
+const ChatPanel = ({ messages, me, onClose }) => {
   const { socket, connected } = useSocket();
 
   const [text, setText] = useState("");
@@ -50,9 +50,20 @@ const ChatPanel = ({ messages, me }) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/8 bg-card">
-      <p className="flex shrink-0 items-center gap-2 border-b border-white/8 px-4 py-2.5 text-xs font-medium text-white/55">
-        <MessageCircle className="size-3.5 text-primary-start" /> Chat
-      </p>
+      <div className="flex shrink-0 items-center justify-between border-b border-white/8 px-4 py-3">
+        <p className="flex items-center gap-2 text-sm font-semibold text-white">
+          <MessageCircle className="size-4 text-primary-start" /> Room chat
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Back to the video call"
+          title="Back to the video call"
+          className="grid size-7 place-items-center rounded-lg text-white/45 transition-colors duration-200 hover:bg-white/5 hover:text-white"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
 
       <div
         ref={listRef}

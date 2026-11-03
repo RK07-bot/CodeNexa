@@ -5,7 +5,18 @@ import { redisConnection } from "../../config/redis.js";
 // one queue for every room timer, so only one worker has to poll Redis
 export const sessionQueue = new Queue("session", { connection: redisConnection });
 
-const options = { removeOnComplete: true, removeOnFail: true };
+const options = {
+  attempts: 3,
+  backoff: {
+    type: "exponential",
+    delay: 3000,
+  },
+  removeOnComplete: true,
+  removeOnFail: {
+    age: 24 * 60 * 60,
+    count: 1000,
+  },
+};
 
 // the person has this long to come back before the room is given up on
 export const scheduleGrace = (roomCode, userId) =>

@@ -12,6 +12,9 @@ import dashboardRouter from "./routes/dashboard.routes.js";
 
 const app = express();
 
+// Trust the single reverse proxy in front of the application
+app.set("trust proxy", 1);
+
 app.use(morgan("dev"));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());

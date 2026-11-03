@@ -53,8 +53,12 @@ const createLimiter = (max, windowMs) => {
 
 // signals are relayed, so only the known fields get through and nothing else can ride along
 const cleanSignal = (payload) => {
-  const { description, candidate } = payload ?? {};
-  const signal = {};
+  const { call, description, candidate } = payload ?? {};
+
+  // every signal belongs to one call, so a message from an old call can never disturb a new one
+  if (typeof call !== "string" || call.length === 0 || call.length > 40) return null;
+
+  const signal = { call };
 
   if (description) {
     const validType = DESCRIPTION_TYPES.includes(description.type);
@@ -269,6 +273,14 @@ export const initSockets = (httpServer) => {
 
       const signal = cleanSignal(payload);
       if (signal) socket.to(chainRoom(chainId)).emit("rtc:signal", signal);
+    });
+
+    // a browser that has no working call asks the other side for one
+    socket.on("rtc:ready", () => {
+      const chainId = activeChain();
+      if (!chainId || !allowRtcEvent()) return;
+
+      socket.to(chainRoom(chainId)).emit("rtc:ready");
     });
 
     // the other side can't tell a muted mic from silence, so each browser announces its own state

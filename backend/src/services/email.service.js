@@ -5,7 +5,7 @@ import nodemailer from "nodemailer";
 export const sendEmail = async ({email,subject,html}) => {
   try {
     const info = await transporter.sendMail({
-      from:`"Authentication App" <${config.MAIL_USER}>` , // sender address
+      from:`"CodeNexa" <${config.MAIL_USER}>` , // sender address
       to:email, // list of receivers
       subject, // Subject line
       html:html, // html body

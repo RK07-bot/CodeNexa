@@ -10,13 +10,14 @@ import ProblemDescription from "../../problems/components/ProblemDescription.jsx
 import SubmissionsList from "../../problems/components/SubmissionsList.jsx";
 import CodeEditor from "../../problems/components/CodeEditor.jsx";
 import TestPanel from "../../problems/components/TestPanel.jsx";
+import ScreenView from "./ScreenView.jsx";
 
 const LEFT_TABS = [
   { id: "description", label: "Description" },
   { id: "submissions", label: "Submissions" },
 ];
 
-const SolveArea = ({ session }) => {
+const SolveArea = ({ session, partnerScreen, onExpandScreen }) => {
   const slug = session.problem.slug;
 
   const [problem, setProblem] = useState(null);
@@ -26,6 +27,19 @@ const SolveArea = ({ session }) => {
   const [language, setLanguage] = useState(getSavedLanguage);
   const [code, setCode, resetCode] = useProblemCode(slug, language);
   const [leftTab, setLeftTab] = useState("description");
+
+  // the partner's screen gets its own tab, opened when the sharing starts and closed when it stops
+  const sharing = Boolean(partnerScreen);
+  const [wasSharing, setWasSharing] = useState(sharing);
+  if (sharing !== wasSharing) {
+    setWasSharing(sharing);
+    setLeftTab((tab) =>
+      sharing ? "screen" : tab === "screen" ? "description" : tab,
+    );
+  }
+  const tabs = sharing
+    ? [...LEFT_TABS, { id: "screen", label: `${partnerScreen.name}'s screen` }]
+    : LEFT_TABS;
 
   const runner = useProblemRunner({
     slug,
@@ -61,14 +75,18 @@ const SolveArea = ({ session }) => {
   }, [slug, reloadKey]);
 
   if (status === "loading") {
-    return <div className="min-h-80 flex-1 animate-pulse rounded-2xl border border-white/8 bg-card" />;
+    return (
+      <div className="min-h-80 flex-1 animate-pulse rounded-2xl border border-white/8 bg-card" />
+    );
   }
 
   if (status === "error") {
     return (
       <div className="flex min-h-80 flex-1 flex-col items-center justify-center rounded-2xl border border-white/8 bg-card px-4 text-center">
         <CircleAlert className="size-8 text-red-400" />
-        <p className="mt-3 text-sm text-white/65">Could not load this problem.</p>
+        <p className="mt-3 text-sm text-white/65">
+          Could not load this problem.
+        </p>
         <button
           type="button"
           onClick={() => setReloadKey((k) => k + 1)}
@@ -88,11 +106,13 @@ const SolveArea = ({ session }) => {
       }`}
     >
       <section
-        style={{ "--left-w": `calc((100% - 0.75rem) * ${resize.leftWidth} / 100)` }}
+        style={{
+          "--left-w": `calc((100% - 0.75rem) * ${resize.leftWidth} / 100)`,
+        }}
         className="flex max-h-[75vh] min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-card lg:max-h-none lg:w-(--left-w) lg:flex-none"
       >
-        <div className="flex shrink-0 items-center gap-5 overflow-x border-b border-white/8 px-5">
-          {LEFT_TABS.map((t) => (
+        <div className="flex shrink-0 items-center gap-5 overflow-x-auto border-b border-white/8 px-5">
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -109,13 +129,26 @@ const SolveArea = ({ session }) => {
         </div>
 
         <div
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-          style={{ scrollbarWidth: "thin", scrollbarColor: "var(--color-primary-start) var(--color-recessed)" }}
+          className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: "var(--color-primary-start) var(--color-recessed)",
+          }}
         >
-          {leftTab === "description" ? (
-            <ProblemDescription problem={problem} solved={runner.solved} showBack={false} />
-          ) : (
+          {leftTab === "screen" && partnerScreen ? (
+            <ScreenView
+              stream={partnerScreen.stream}
+              name={partnerScreen.name}
+              onToggle={onExpandScreen}
+            />
+          ) : leftTab === "submissions" ? (
             <SubmissionsList submissions={runner.submissions} />
+          ) : (
+            <ProblemDescription
+              problem={problem}
+              solved={runner.solved}
+              showBack={false}
+            />
           )}
         </div>
       </section>
@@ -137,12 +170,14 @@ const SolveArea = ({ session }) => {
 
       <section
         ref={resize.rightPanelRef}
-        style={{ "--right-w": `calc((100% - 0.75rem) * ${100 - resize.leftWidth} / 100)` }}
+        style={{
+          "--right-w": `calc((100% - 0.75rem) * ${100 - resize.leftWidth} / 100)`,
+        }}
         className="flex min-h-0 min-w-0 flex-col lg:w-(--right-w) lg:flex-none"
       >
         <div
           style={{ "--editor-h": `${resize.editorHeight}%` }}
-          className="flex h-[480px] min-h-0 flex-col pb-1.5 lg:h-(--editor-h)"
+          className="flex h-[min(480px,65vh)] min-h-0 flex-col pb-1.5 lg:h-(--editor-h)"
         >
           <CodeEditor
             modelPath={`${problem.slug}.${language}`}

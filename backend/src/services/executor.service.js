@@ -133,9 +133,6 @@ const runOne = async (job) => {
       input: job.stdin,
     });
 
-    if (config.ONLINECOMPILER_DEBUG)
-      console.log("OnlineCompiler raw response:", data);
-
     return toResult(data, job);
   } finally {
     release();

@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CircleAlert, SearchX } from "lucide-react";
 import { getSession } from "../../api/sessions.api.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 import { useSocket } from "../../context/SocketContext.jsx";
+import useCall from "../../hooks/useCall.js";
 import SessionShell, { SessionCard } from "./components/SessionShell.jsx";
 import JoinPreview from "./components/JoinPreview.jsx";
 import WaitingRoom from "./components/WaitingRoom.jsx";
-import Workspace from "./components/WorkSpace.jsx";
+import Workspace from "./components/Workspace.jsx";
 import EndedView from "./components/EndedView.jsx";
 import TakenOver from "./components/TakenOver.jsx";
 
@@ -18,6 +20,7 @@ const SessionPage = () => {
   const code = (rawCode ?? "").toUpperCase();
   const navigate = useNavigate();
   const { socket, joinRoom, leaveRoom, takenOver } = useSocket();
+  const { user } = useAuth();
 
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -25,6 +28,8 @@ const SessionPage = () => {
   const [presence, setPresence] = useState(null);
   const [chat, setChat] = useState({ chainId: null, messages: [] });
   const [clockOffset, setClockOffset] = useState(0);
+  // who the call is with, kept while the next room of the chain loads so the call does not drop
+  const [callInfo, setCallInfo] = useState({ partner: null, on: false });
   const [reloadKey, setReloadKey] = useState(0);
   const loadedFor = useRef(null);
 
@@ -50,6 +55,14 @@ const SessionPage = () => {
 
         setSession(loaded);
         setClockOffset(offsetFrom(loaded.serverTime));
+        setCallInfo({
+          partner: loaded.participants?.find((p) => p.username !== user.username)?.username ?? null,
+          on: Boolean(
+            loaded.isParticipant &&
+              (loaded.status === "active" ||
+                (loaded.status === "completed" && loaded.visibility === "private" && !loaded.nextRoomCode)),
+          ),
+        });
         // the next problem of the same chain keeps the conversation, a new chain starts empty
         setChat((prev) => (prev.chainId === chainId ? prev : { chainId, messages: [] }));
         setStatus("ready");
@@ -65,7 +78,7 @@ const SessionPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [code, reloadKey]);
+  }, [code, reloadKey, user.username]);
 
   const isOpen = session?.status === "waiting" || session?.status === "active";
   // a finished private room keeps the call and chat alive so the pair can pick another problem
@@ -115,6 +128,15 @@ const SessionPage = () => {
       socket.off("chat:message", onChat);
     };
   }, [socket, code, navigate]);
+
+  const call = useCall({
+    socket,
+    enabled: callInfo.on && takenOver?.roomCode !== code,
+    roomCode: code,
+    me: user.username,
+    partner: callInfo.partner,
+    presence,
+  });
 
   if (status === "loading") {
     return (
@@ -185,6 +207,7 @@ const SessionPage = () => {
         session={session}
         presence={presence}
         chat={chat}
+        call={call}
         clockOffset={clockOffset}
         onEnded={reload}
       />

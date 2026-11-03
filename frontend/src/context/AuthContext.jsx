@@ -8,6 +8,12 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const handleLogout = () => {
+      setUser(null);
+    };
+
+    window.addEventListener("auth:logout", handleLogout);
+
     const loadUser = async () => {
       try {
         const res = await getMyProfile();
@@ -20,15 +26,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     loadUser();
+
+    return () => {
+      window.removeEventListener("auth:logout", handleLogout);
+    };
   }, []);
 
   const value = { user, setUser, loading };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

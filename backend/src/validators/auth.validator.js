@@ -31,8 +31,19 @@ export const resendOtpSchema = z.object({
   email: z.string().email("Invalid Email"),
 });
 
-export const changePasswordSchema = z.object({
-  email: z.string().email("Invalid Email"),
-  resetToken: z.string().min(1, "Reset token is required"),
-  newPassword: z.string().min(8, "Password must be atleast 8 character long"),
-});
+export const changePasswordSchema = z
+  .object({
+    resetToken: z.string().min(1, "Reset token is required"),
+
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters long"),
+
+    confirmNewPassword: z
+      .string()
+      .min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Passwords do not match",
+    path: ["confirmNewPassword"],
+  });

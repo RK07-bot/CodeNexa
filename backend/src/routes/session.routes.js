@@ -26,6 +26,6 @@ sessionRouter.post("/:code/join", joinSession);
 sessionRouter.post("/:code/cancel", cancelSession);
 sessionRouter.post("/:code/end", endSession);
 sessionRouter.post("/:code/next", startNextSession);
-sessionRouter.get("/rtc/config", getIceServers);
+
 
 export default sessionRouter;

@@ -55,9 +55,11 @@ export const isAuthenticated = async (req, res, next) => {
       });
     }
 
+    console.error("Authentication middleware error:", err);
+
     return res.status(500).json({
       success: false,
-      message: err.message,
+      message: "Internal server error",
     });
   }
 };

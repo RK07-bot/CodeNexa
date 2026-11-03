@@ -285,7 +285,7 @@ const RecentPractice = ({ submissions }) => (
       </div>
     ) : (
       <div className="min-h-0 flex-1 overflow-auto border-t border-white/8" style={SCROLL_STYLE}>
-        <div className="min-w-[680px]">
+        <div className="min-w-[600px] sm:min-w-[680px]">
           <div
             className={`sticky top-0 z-10 border-b border-white/8 bg-recessed py-2.5 text-xs font-medium uppercase tracking-wider text-white/35 ${COLUMNS}`}
           >

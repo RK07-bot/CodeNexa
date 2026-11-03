@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../../config/redis.js";
-import { draftWithAi, failDraft, sweepStale } from "../../services/aiDraft.service.js";
+import { draftWithAi, failDraft, sweepStale } from "../../services/aidraft.service.js";
 
 const SWEEP_EVERY_MS = 10 * 60 * 1000;
 

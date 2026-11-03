@@ -28,7 +28,7 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const handleProtectedClick = (e, to) => {
+  const handleProtectedClick = (e) => {
     if (user) {
       setMobileMenuOpen(false);
       return;
@@ -46,8 +46,8 @@ const Navbar = () => {
     setTimeout(() => setShowNudge(false), 1800);
   };
 
-  const handleMobileLinkClick = (e, to) => {
-    handleProtectedClick(e, to);
+  const handleMobileLinkClick = (e) => {
+    handleProtectedClick(e);
 
     if (user) {
       setMobileMenuOpen(false);
@@ -73,7 +73,7 @@ const Navbar = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  onClick={(e) => handleProtectedClick(e, link.to)}
+                  onClick={(e) => handleProtectedClick(e)}
                   className="group relative text-sm text-white/65 transition-colors duration-200 hover:text-white"
                 >
                   {link.label}
@@ -205,8 +205,7 @@ const Navbar = () => {
                         to={link.to}
                         onClick={(e) =>
                           handleMobileLinkClick(
-                            e,
-                            link.to
+                            e
                           )
                         }
                         className="border-b border-white/6 py-3.5 text-sm font-medium text-white/65 transition-colors hover:text-white"

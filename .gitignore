@@ -19,7 +19,7 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # Runtime data
-*.pid
+*.pidA
 *.seed
 *.pid.lock
 

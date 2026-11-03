@@ -1,9 +1,22 @@
 import axios from "axios";
+import { SERVER_URL } from "../lib/config.js";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: `${SERVER_URL}/api`,
   withCredentials: true, // required so the browser actually sends the httpOnly cookies
 });
+
+let refreshPromise = null;
+
+export const refreshSession = () => {
+  if (!refreshPromise) {
+    refreshPromise = api.post("/auth/refresh").finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+};
 
 let isRefreshing = false;
 let pendingQueue = [];
@@ -48,7 +61,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await api.post("/auth/refresh");
+       await refreshSession();
 
         processQueue(null);
 
@@ -65,7 +78,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

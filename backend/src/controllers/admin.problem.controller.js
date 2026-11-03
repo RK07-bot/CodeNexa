@@ -7,7 +7,7 @@ import sessionModel from "../models/session.model.js";
 import { LANGUAGES } from "../config/languages.js";
 import { ExecutionError } from "../services/executor.service.js";
 import { isAiConfigured } from "../services/gemini.service.js";
-import { failDraft } from "../services/aiDraft.service.js";
+import { failDraft } from "../services/aidraft.service.js";
 import { enqueueAiDraft } from "../jobs/queues/problem.queue.js";
 import { runAllTests } from "../services/judge.service.js";
 import { listAdminProblemsQuerySchema } from "../validators/admin.validator.js";

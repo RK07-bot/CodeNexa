@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 
 if (!process.env.PORT) {
@@ -26,29 +25,49 @@ if (!process.env.ACCESS_JWT_SECRET) {
   throw new Error("ACCESS_JWT_SECRET IS NOT DEFINED IN ENVIRONMENT VARIABLES");
 }
 if (!process.env.REFRESH_JWT_SECRET) {
-  throw new Error(
-    "REFRESH_JWT_SECRET IS NOT DEFINED IN ENVIRONMENT VARIABLES"
-  );
+  throw new Error("REFRESH_JWT_SECRET IS NOT DEFINED IN ENVIRONMENT VARIABLES");
 }
 if (!process.env.NODE_ENV) {
   throw new Error("NODE_ENV IS NOT DEFINED IN ENVIRONMENT VARIABLES");
 }
 if (!process.env.ONLINECOMPILER_API_KEY) {
   throw new Error(
-    "ONLINECOMPILER_API_KEY IS NOT DEFINED IN ENVIRONMENT VARIABLES"
+    "ONLINECOMPILER_API_KEY IS NOT DEFINED IN ENVIRONMENT VARIABLES",
   );
 }
 
 if (!process.env.RECONNECT_GRACE_SECONDS) {
   throw new Error(
-    "RECONNECT_GRACE_SECONDS IS NOT DEFINED IN ENVIRONMENT VARIABLES"
+    "RECONNECT_GRACE_SECONDS IS NOT DEFINED IN ENVIRONMENT VARIABLES",
   );
 }
 if (!process.env.WAITING_ROOM_EXPIRY_MINUTES) {
   throw new Error(
-    "WAITING_ROOM_EXPIRY_MINUTES IS NOT DEFINED IN ENVIRONMENT VARIABLES"
+    "WAITING_ROOM_EXPIRY_MINUTES IS NOT DEFINED IN ENVIRONMENT VARIABLES",
   );
 }
+
+const parseIceServers = () => {
+  if (!process.env.ICE_SERVERS) {
+    return [
+      {
+        urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"],
+      },
+    ];
+  }
+
+  try {
+    const servers = JSON.parse(process.env.ICE_SERVERS);
+
+    if (!Array.isArray(servers) || servers.length === 0) {
+      throw new Error("ICE_SERVERS must be a non-empty array");
+    }
+
+    return servers;
+  } catch (error) {
+    throw new Error(`Invalid ICE_SERVERS configuration: ${error.message}`);
+  }
+};
 
 const config = {
   MONGO_URI: process.env.MONGO_URI,
@@ -71,26 +90,15 @@ const config = {
   // Gemini AI configuration
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   GEMINI_MODEL: process.env.GEMINI_MODEL,
-  GEMINI_FALLBACK_MODEL:
-    process.env.GEMINI_FALLBACK_MODEL,
+  GEMINI_FALLBACK_MODEL: process.env.GEMINI_FALLBACK_MODEL,
 
-  RECONNECT_GRACE_SECONDS:
-    Number(process.env.RECONNECT_GRACE_SECONDS) || 60,
+  RECONNECT_GRACE_SECONDS: Number(process.env.RECONNECT_GRACE_SECONDS) || 60,
 
   WAITING_ROOM_EXPIRY_MINUTES:
     Number(process.env.WAITING_ROOM_EXPIRY_MINUTES) || 30,
 
   // STUN and TURN configuration
-  ICE_SERVERS: process.env.ICE_SERVERS
-    ? JSON.parse(process.env.ICE_SERVERS)
-    : [
-        {
-          urls: [
-            "stun:stun.l.google.com:19302",
-            "stun:stun.cloudflare.com:3478",
-          ],
-        },
-      ],
+  ICE_SERVERS: parseIceServers(),
 };
 
 export default config;

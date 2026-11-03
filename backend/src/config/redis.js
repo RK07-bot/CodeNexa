@@ -28,7 +28,8 @@ const url = new URL(config.REDIS_URL);
 export const redisConnection = {
   host: url.hostname,
   port: Number(url.port),
-  password: url.password || undefined,
+  username: url.username ? decodeURIComponent(url.username) : undefined,
+  password: url.password ? decodeURIComponent(url.password) : undefined,
 
   // Enable TLS when Redis uses a secure rediss:// connection
   ...(url.protocol === "rediss:" && { tls: {} }),
