@@ -335,25 +335,59 @@ export const runAiDraft = async (
       );
     }
 
-    // the brute force only needs to run where the reference worked
-    const checkable = baseInputs.filter((_, i) => refRuns[i].status === "ok");
-    const bruteRuns = await runPython(deps, solutions.bruteForce, checkable, BRUTE_FORCE_TIME_LIMIT);
-    const bruteByInput = new Map(checkable.map((input, i) => [input, bruteRuns[i]]));
-
-    // per input: failed, disagree, agreed or unchecked (the brute force could not run)
-    const verdicts = baseInputs.map((input, i) => {
-      const ref = refRuns[i];
-      if (ref.status !== "ok") return { input, kind: "failed" };
-
-      const brute = bruteByInput.get(input);
-      if (brute.status !== "ok") return { input, kind: "unchecked", output: normalize(ref.stdout) };
-
-      return normalize(brute.stdout) === normalize(ref.stdout)
-        ? { input, kind: "agreed", output: normalize(ref.stdout) }
-        : { input, kind: "disagree", output: normalize(ref.stdout), brute: normalize(brute.stdout) };
+    // The brute-force solution only runs where the reference solution produced
+    // a valid, non-empty output.
+    const checkable = baseInputs.filter((_, i) => {
+      const run = refRuns[i];
+      return run.status === "ok" && normalize(run.stdout).length > 0;
     });
 
-    const compared = verdicts.filter((v) => v.kind === "agreed" || v.kind === "disagree").length;
+    const bruteRuns = await runPython(
+      deps,
+      solutions.bruteForce,
+      checkable,
+      BRUTE_FORCE_TIME_LIMIT,
+    );
+
+    const bruteByInput = new Map(
+      checkable.map((input, i) => [input, bruteRuns[i]]),
+    );
+
+    // Per input: failed, no_output, disagree, agreed or unchecked.
+    const verdicts = baseInputs.map((input, i) => {
+      const ref = refRuns[i];
+
+      if (ref.status !== "ok") {
+        return { input, kind: "failed" };
+      }
+
+      const refOutput = normalize(ref.stdout);
+
+      if (refOutput.length === 0) {
+        return { input, kind: "no_output" };
+      }
+
+      const brute = bruteByInput.get(input);
+
+      if (!brute || brute.status !== "ok") {
+        return { input, kind: "unchecked", output: refOutput };
+      }
+
+      const bruteOutput = normalize(brute.stdout);
+
+      if (bruteOutput.length === 0) {
+        return { input, kind: "unchecked", output: refOutput };
+      }
+
+      return bruteOutput === refOutput
+        ? { input, kind: "agreed", output: refOutput }
+        : { input, kind: "disagree", output: refOutput, brute: bruteOutput };
+    });
+
+    const compared = verdicts.filter(
+      (v) => v.kind === "agreed" || v.kind === "disagree",
+    ).length;
+
     const disagreed = verdicts.filter((v) => v.kind === "disagree").length;
     const unchecked = verdicts.filter((v) => v.kind === "unchecked").length;
 
@@ -364,7 +398,10 @@ export const runAiDraft = async (
     }
 
     if (unchecked > verdicts.length / 2) {
-      flag("warn", `The brute-force solution could not run on ${unchecked} of ${verdicts.length} inputs, so most outputs were checked by the reference solution alone.`);
+      flag(
+        "warn",
+        `The brute-force solution could not run on ${unchecked} of ${verdicts.length} inputs, so most outputs were checked by the reference solution alone.`,
+      );
     }
 
     // examples: the solution decides the output, the statement's claim is checked against it
@@ -376,6 +413,11 @@ export const runAiDraft = async (
 
       if (verdict.kind === "failed") {
         flag("error", `Example ${i + 1} was removed because the reference solution could not run on it.`);
+        return;
+      }
+
+      if (verdict.kind === "no_output") {
+        flag("error", `Example ${i + 1} was removed because the reference solution produced no output.`);
         return;
       }
 
@@ -399,17 +441,49 @@ export const runAiDraft = async (
 
     // hidden tests from the small inputs
     const smallVerdicts = verdicts.slice(statement.examples.length);
-    const droppedFailed = smallVerdicts.filter((v) => v.kind === "failed").length;
-    const droppedDisagree = disagreed - verdicts.slice(0, statement.examples.length).filter((v) => v.kind === "disagree").length;
-    const testCases = smallVerdicts
-      .filter((v) => v.kind === "agreed" || v.kind === "unchecked")
-      .map((v) => ({ input: v.input, expectedOutput: v.output, source: "ai" }));
 
-    if (droppedFailed > 0) flag("info", `${droppedFailed} generated inputs were dropped because the reference solution could not run on them.`);
-    if (droppedDisagree > 0) flag("warn", `${droppedDisagree} generated inputs were dropped because the two solutions gave different answers.`);
+    const droppedFailed = smallVerdicts.filter(
+      (v) => v.kind === "failed",
+    ).length;
+
+    const droppedNoOutput = smallVerdicts.filter(
+      (v) => v.kind === "no_output",
+    ).length;
+
+    const droppedDisagree =
+      disagreed -
+      verdicts
+        .slice(0, statement.examples.length)
+        .filter((v) => v.kind === "disagree").length;
+
+    const testCases = smallVerdicts
+      .filter(
+        (v) =>
+          (v.kind === "agreed" || v.kind === "unchecked") &&
+          typeof v.output === "string" &&
+          v.output.length > 0,
+      )
+      .map((v) => ({
+        input: v.input,
+        expectedOutput: v.output,
+        source: "ai",
+      }));
+
+    if (droppedFailed > 0) {
+      flag("info", `${droppedFailed} generated inputs were dropped because the reference solution could not run on them.`);
+    }
+
+    if (droppedNoOutput > 0) {
+      flag("warn", `${droppedNoOutput} generated inputs were dropped because the reference solution produced no output.`);
+    }
+
+    if (droppedDisagree > 0) {
+      flag("warn", `${droppedDisagree} generated inputs were dropped because the two solutions gave different answers.`);
+    }
 
     // 5. large tests, made by the generator and answered by the reference solution only
     let largeTests = 0;
+    let droppedLargeNoOutput = 0;
 
     if (!tests.generator.trim()) {
       flag("warn", "No generator was produced, so there are no large tests to catch slow solutions.");
@@ -428,18 +502,39 @@ export const runAiDraft = async (
         generated
           .filter((g) => g.status === "ok")
           .map((g) => g.stdout.replace(/\r\n/g, "\n").trimEnd())
-          .filter((input) => input.length > 0 && input.length <= MAX_LARGE_INPUT_CHARS),
+          .filter(
+            (input) =>
+              input.length > 0 &&
+              input.length <= MAX_LARGE_INPUT_CHARS,
+          ),
       ).filter((input) => !exampleKeys.has(normalize(input)));
 
       if (usable.length < LARGE_TEST_SEEDS.length) {
         flag("warn", `The test generator produced ${usable.length} usable large inputs out of ${LARGE_TEST_SEEDS.length}.`);
       }
 
-      const largeRuns = await runPython(deps, solution.code, usable, statement.timeLimit);
+      const largeRuns = await runPython(
+        deps,
+        solution.code,
+        usable,
+        statement.timeLimit,
+      );
 
       usable.forEach((input, i) => {
         if (largeRuns[i].status === "ok") {
-          testCases.push({ input, expectedOutput: normalize(largeRuns[i].stdout), source: "ai" });
+          const expectedOutput = normalize(largeRuns[i].stdout);
+
+          if (expectedOutput.length === 0) {
+            droppedLargeNoOutput++;
+            return;
+          }
+
+          testCases.push({
+            input,
+            expectedOutput,
+            source: "ai",
+          });
+
           largeTests++;
         } else if (largeRuns[i].status === "time_limit_exceeded") {
           flag("warn", `The reference solution was too slow on a large generated input (over ${statement.timeLimit}s). Either the constraints are too big or the solution is not efficient enough.`);
@@ -447,11 +542,22 @@ export const runAiDraft = async (
           flag("warn", "The reference solution failed on a large generated input.");
         }
       });
+
+      if (droppedLargeNoOutput > 0) {
+        flag("warn", `${droppedLargeNoOutput} large generated inputs were dropped because the reference solution produced no output.`);
+      }
     }
 
+    // Final defensive check: never persist an empty expected output.
+    const validTestCases = testCases.filter(
+      (test) =>
+        typeof test.expectedOutput === "string" &&
+        test.expectedOutput.length > 0,
+    );
+
     // never two identical hidden tests
-    const hiddenTests = unique(testCases.map((t) => t.input)).map((input) =>
-      testCases.find((t) => t.input === input),
+    const hiddenTests = unique(validTestCases.map((t) => t.input)).map(
+      (input) => validTestCases.find((t) => t.input === input),
     );
 
     if (hiddenTests.length < MIN_HIDDEN_TESTS) {
@@ -483,7 +589,9 @@ export const runAiDraft = async (
           largeTests,
           crossChecked: compared,
           droppedFailed,
+          droppedNoOutput,
           droppedDisagree,
+          droppedLargeNoOutput,
           examplesCorrected,
         },
         tokens: deps.usage.tokens,
@@ -499,6 +607,7 @@ export const runAiDraft = async (
           : error.message,
       );
     }
+
     throw error;
   }
 };
