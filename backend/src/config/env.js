@@ -89,6 +89,7 @@ const config = {
   MONGO_URI: process.env.MONGO_URI,
   PORT: process.env.PORT,
   REDIS_URL: process.env.REDIS_URL,
+  QUEUE_REDIS_URL: process.env.QUEUE_REDIS_URL || process.env.REDIS_URL,
   FRONTEND_URL: process.env.FRONTEND_URL,
   APP_NAME: process.env.APP_NAME,
 
