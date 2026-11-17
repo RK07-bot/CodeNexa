@@ -3,7 +3,6 @@ import { redisConnection } from "../../config/redis.js";
 import sessionModel from "../../models/session.model.js";
 import { closeSession } from "../../services/session.service.js";
 import { emitToChain,emitToLobby } from "../../sockets/io.js";
-import { workerOptions } from "../../config/redis.js";   
 
 const giveUp = async (session, endReason) => {
   const closed = await closeSession(session, { status: "abandoned", endReason });
@@ -37,11 +36,10 @@ const handlers = {
     if (session) await giveUp(session, "expired");
   },
 };
-
 export const sessionWorker = new Worker(
   "session",
   async (job) => handlers[job.name]?.(job.data),
-  workerOptions,                                           // changed (was { connection: redisConnection })
+  { connection: redisConnection },
 );
 
 sessionWorker.on("failed", (job, err) => {
