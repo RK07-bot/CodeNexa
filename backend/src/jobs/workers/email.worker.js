@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { redisConnection } from "../../config/redis.js";
+import { workerOptions } from "../../config/redis.js";
 import { sendEmail } from "../../services/email.service.js";
 
 // Worker that picks up email jobs from the "email" queue
@@ -12,7 +12,7 @@ export const emailWorker = new Worker(
     // Send the email
     await sendEmail({ email, subject, html });
   },
-  { connection: redisConnection }
+  workerOptions
 );
 
 // Runs when a job fails after BullMQ gives up trying

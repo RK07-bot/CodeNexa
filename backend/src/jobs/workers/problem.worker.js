@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../../config/redis.js";
 import { draftWithAi, failDraft, sweepStale } from "../../services/aidraft.service.js";
+import { workerOptions } from "../../config/redis.js";   
 
 const SWEEP_EVERY_MS = 10 * 60 * 1000;
 
@@ -10,7 +11,7 @@ export const problemWorker = new Worker(
     if (job.name === "ai-draft") await draftWithAi(job.data);
   },
   // drafting is slow and uses the shared code runner, so one problem at a time
-  { connection: redisConnection, concurrency: 1, lockDuration: 60_000 },
+  { ...workerOptions, concurrency: 1, lockDuration: 60_000 },   // changed
 );
 
 problemWorker.on("failed", async (job, err) => {
