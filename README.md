@@ -14,7 +14,13 @@
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101?logo=socketdotio&logoColor=white)
 ![WebRTC](https://img.shields.io/badge/WebRTC-P2P_calls-333333?logo=webrtc&logoColor=white)
 
-[Live Demo](#live-demo) · [Features](#features) · [Architecture](#architecture) · [Getting Started](#getting-started) · [API Reference](#api-reference)
+[Live Demo](#live-demo) · [Screenshots](#screenshots) · [Features](#features) · [Architecture](#architecture) · [Getting Started](#getting-started) · [API Reference](#api-reference)
+
+<br />
+
+<a href="https://codenexa-qwsn.onrender.com/">
+  <img src="docs/screenshots/landing.png" alt="CodeNexa landing page" width="900" />
+</a>
 
 </div>
 
@@ -23,6 +29,8 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Live Demo](#live-demo)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
@@ -35,8 +43,6 @@
 - [Application Workflows](#application-workflows)
 - [Security & Rate Limiting](#security--rate-limiting)
 - [Deployment](#deployment)
-- [Live Demo](#live-demo)
-- [Screenshots](#screenshots)
 - [Known Limitations](#known-limitations)
 - [Future Improvements](#future-improvements)
 - [License](#license)
@@ -52,6 +58,51 @@ CodeNexa is a full-stack web application for **technical-interview practice**. I
 - **Admin tooling:** admins author, validate, review and publish problems, and can have **Google Gemini draft an entire problem** (statement, solutions, tests) from a one-line idea. Every AI-drafted problem is cross-checked by actually executing code before it can be published.
 
 The problem it solves: interview preparation platforms usually give you either a judge *or* a way to practise talking through a problem with a human. CodeNexa puts both in one place.
+
+---
+
+## Live Demo
+
+> 🔗 **Try it here:** **[codenexa-qwsn.onrender.com](https://codenexa-qwsn.onrender.com/)**
+
+Register with your email, click the verification link you receive, and you can start solving problems straight away. To try an interview room, create one from any problem's **Practice with a partner** tab and join it from a second browser or device with the 6-character room code.
+
+---
+
+## Screenshots
+
+### Landing page
+![Landing page](docs/screenshots/landing.png)
+
+### Problem set
+Search, difficulty, topic and progress filters, with per-problem acceptance rate.
+
+![Problem set](docs/screenshots/problems.png)
+
+### Problem workspace (solo practice)
+Monaco editor with Python, C++ and TypeScript, example runs, hidden-test submissions and submission history.
+
+![Problem workspace](docs/screenshots/problem-workspace.png)
+
+### Interview room
+Problem, editor and test results on the left and centre, with a live WebRTC video call, screen sharing and chat on the right.
+
+![Interview room](docs/screenshots/interview-room.png)
+
+### Dashboard
+Solved ring by difficulty, streaks, language and topic breakdowns, and recent practice labelled **Solo** or **Interview**.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Admin console
+Platform overview with user and problem counts, submissions, live rooms and items that need attention.
+
+![Admin overview](docs/screenshots/admin-overview.png)
+
+### AI problem drafting
+An admin describes an idea, optionally picks a difficulty, and the background pipeline drafts and verifies the problem before it goes to review.
+
+![AI problem drafting](docs/screenshots/admin-ai-draft.png)
 
 ---
 
@@ -189,6 +240,9 @@ CodeNexa/
 │       ├── sockets/              # Socket.IO server (index.js) and emit helpers (io.js)
 │       └── utils/                # rate limiter, tokens, cookies, OTP, room codes, fingerprint, audit log...
 │
+├── docs/
+│   └── screenshots/              # Images used in this README
+│
 └── frontend/
     ├── index.html
     ├── vite.config.js            # React + Tailwind (Vite plugin)
@@ -304,6 +358,7 @@ node scripts/seedProblems.js you@example.com   # imports + publishes the 4 probl
 `seedProblems.js` is idempotent: running it again updates problems (matched by slug) instead of duplicating them.
 
 > After changing a role directly in the database, log out and back in (or wait for the 1-hour user cache to expire) so the new role is picked up. Role changes made through the admin UI invalidate the cache automatically.
+
 ### Useful scripts
 
 | Location | Command | Purpose |
@@ -317,6 +372,7 @@ node scripts/seedProblems.js you@example.com   # imports + publishes the 4 probl
 | `frontend` | `npm run lint` | ESLint |
 
 > The two test scripts log in with `force: true`, which signs those accounts out of any other device. Use throwaway accounts.
+
 ---
 
 ## Environment Variables
@@ -359,6 +415,7 @@ Vite bakes these in at **build time**.
 | `VITE_TURN_CREDENTIAL` | ➖ | TURN credential | `<turn-password>` |
 
 > Never commit real secrets. The repository's `.gitignore` already excludes `.env` and `.env.*`. There is currently no committed `.env.example`; the blocks above are the reference.
+
 ---
 
 ## API Reference
@@ -589,7 +646,7 @@ stateDiagram-v2
 
 ## Deployment
 
-The repository does **not** include a Dockerfile, CI workflow or platform-specific config (no `vercel.json`, `render.yaml`, `Procfile`, etc.). The notes below follow from how the code is written.
+The repository does **not** include a Dockerfile, CI workflow or platform-specific config (no `vercel.json`, `render.yaml`, `Procfile`, etc.). The notes below follow from how the code is written. The public demo at [codenexa-qwsn.onrender.com](https://codenexa-qwsn.onrender.com/) is hosted on Render.
 
 **Backend**
 - Deploy as a **long-running Node.js process** (not serverless): it hosts WebSocket connections, BullMQ workers and in-process timers.
@@ -610,36 +667,13 @@ Serve `dist/` from any static host. Because the app uses `BrowserRouter`, config
 
 ---
 
-## Live Demo
-
-> 🔗 **Live URL:** _add your deployed frontend URL here_
-> 🔗 **API URL:** _add your deployed backend URL here_
----
-
-## Screenshots
-
-> Add images to a `docs/screenshots/` folder and update the paths below.
-| Landing page | Problem workspace |
-|---|---|
-| ![Landing page](docs/screenshots/landing.png) | ![Problem workspace](docs/screenshots/problem.png) |
-
-| Interview room | Dashboard |
-|---|---|
-| ![Interview room](docs/screenshots/session.png) | ![Dashboard](docs/screenshots/dashboard.png) |
-
-| Admin overview | AI problem review |
-|---|---|
-| ![Admin overview](docs/screenshots/admin-overview.png) | ![AI problem review](docs/screenshots/admin-ai-review.png) |
-
----
-
 ## Known Limitations
 
 Documented here so the README reflects what the code does today.
 
 - **No shared live editor.** The server relays `code:update`, `code:sync-request` and `code:sync-reply` events, but the current frontend does not use them. Each participant edits their own code; collaboration happens through the call, chat and screen sharing.
 - **AI is used for authoring only.** Gemini drafts problems for admins. There is no AI feedback on user submissions, even though the landing page copy mentions it.
-- **User problem submission is not built.** `/submit` is a "Coming soon" page. (The `pending_review` status exists in the model and is used by the AI pipeline.)
+- **User problem submission is not built.** `/submit` (the **Contribute** link in the navbar) is a "Coming soon" page. (The `pending_review` status exists in the model and is used by the AI pipeline.)
 - **Memory limit is stored but not enforced.** The execution provider cannot take a memory limit; only the time limit is checked (against the provider-reported run time, excluding compilation).
 - **TURN/ICE configuration is split.** The call hook in the browser builds its ICE list from public STUN plus `VITE_TURN_*`. The backend's `ICE_SERVERS` and `GET /api/sessions/rtc/config` exist but are not currently consumed by the frontend, so set TURN via the `VITE_TURN_*` variables.
 - **Single-instance design.** Socket.IO has no Redis adapter, and the executor's concurrency/per-minute throttling is held in process memory, so running multiple backend instances would need changes.
