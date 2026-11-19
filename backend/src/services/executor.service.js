@@ -9,7 +9,6 @@ const MAX_ATTEMPTS = 5;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// only 4 executions can run at once, everything else waits its turn here
 let active = 0;
 const waiting = [];
 
