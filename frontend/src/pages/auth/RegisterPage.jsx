@@ -1,11 +1,7 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import {
-  registerUser,
-  resendVerificationEmail,
-} from "../../api/auth.api.js";
+import { registerUser, resendVerificationEmail } from "../../api/auth.api.js";
 
 const RegisterPage = () => {
   const [username, setUsername] = useState("");
@@ -43,7 +39,7 @@ const RegisterPage = () => {
           errors?.email?.[0] ||
           errors?.password?.[0] ||
           errors?.message ||
-          "Something went wrong. Please try again."
+          "Something went wrong. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -60,7 +56,7 @@ const RegisterPage = () => {
     } catch (err) {
       setResendMessage(
         err.response?.data?.errors?.message ||
-          "Couldn't resend. Try again shortly."
+          "Couldn't resend. Try again shortly.",
       );
     } finally {
       setResending(false);
@@ -76,11 +72,7 @@ const RegisterPage = () => {
 
       {/* Brand */}
       <div className="relative z-10 w-full max-w-md shrink-0 pt-7 text-center">
-        <Link
-          to="/"
-          aria-label="Go to CodeNexa home"
-          className="inline-block"
-        >
+        <Link to="/" aria-label="Go to CodeNexa home" className="inline-block">
           <p className="text-2xl font-bold tracking-tight">
             Code
             <span className="bg-linear-to-r from-primary-start to-primary-end bg-clip-text text-transparent">
@@ -239,20 +231,14 @@ const RegisterPage = () => {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowPassword((prev) => !prev)
-                      }
+                      onClick={() => setShowPassword((prev) => !prev)}
                       aria-label={
                         showPassword ? "Hide password" : "Show password"
                       }
                       aria-pressed={showPassword}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-primary-start focus-visible:outline-none focus-visible:text-primary-start"
                     >
-                      {showPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
@@ -292,9 +278,7 @@ const RegisterPage = () => {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowConfirmPassword((prev) => !prev)
-                      }
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
                       aria-label={
                         showConfirmPassword
                           ? "Hide confirm password"
@@ -315,9 +299,7 @@ const RegisterPage = () => {
                 {/* Error */}
                 {error && (
                   <div className="rounded-xl border border-red-500/15 bg-red-500/7 px-3.5 py-2">
-                    <p className="text-sm leading-5 text-red-400">
-                      {error}
-                    </p>
+                    <p className="text-sm leading-5 text-red-400">{error}</p>
                   </div>
                 )}
 
@@ -371,6 +353,10 @@ const RegisterPage = () => {
                 We sent a verification link to{" "}
                 <span className="text-white/75">{email}</span>. It expires in 5
                 minutes.
+              </p>
+
+              <p className="mt-2 text-xs leading-5 text-white/40">
+                Didn't receive the email? Please check your spam or junk folder.
               </p>
 
               {resendMessage && (
